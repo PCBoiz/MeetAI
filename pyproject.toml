@@ -1,0 +1,127 @@
+[project]
+name = "meetai"
+version = "0.1.0"
+description = "MeetAI - local-first personal meeting assistant supervisor (Phase 0/1 core, no live Discord voice)"
+requires-python = ">=3.12,<3.13"
+license = "MIT"
+dependencies = [
+    "pydantic>=2.13.5,<3",
+    "pydantic-settings>=2.15.0,<3",
+    # Declared explicitly although pydantic-settings also depends on it:
+    # settings.py imports dotenv_values at module level, so if that
+    # transitive edge ever disappeared, importing meetai.settings would
+    # break. A direct import is a direct dependency.
+    "python-dotenv>=1.2,<2",
+]
+
+# The local web UI (slice S0.6) is not built yet, so its dependencies are not
+# installed. They sit here rather than in `dependencies` for two reasons:
+#   1. AGENTS.md forbids a dependency the current requirement does not need.
+#   2. fastapi >= 0.142 ships a first-party telemetry subsystem whose
+#      `auto_configure` defaults to True and which reads OTEL_EXPORTER_OTLP_*
+#      from the environment. It cannot export today only because
+#      opentelemetry-sdk is absent. Keeping fastapi out of the installed set
+#      until the UI exists keeps that whole surface out of Phase 0/1.
+# When S0.6 lands, pin fastapi exactly, construct the app with telemetry fully
+# disabled, and add the test that asserts no OTel SDK is importable.
+[project.optional-dependencies]
+ui = [
+    # Exact pin, not a range. A >= pin cannot hold a review of telemetry
+    # defaults: 0.142 ships a first-party telemetry subsystem whose signal
+    # flags default to on, and a test asserts the resolved config exactly, so
+    # a new signal key in a later version fails that test until someone
+    # explicitly disables it. Upgrading is a deliberate, reviewed act.
+    "fastapi==0.142.2",
+    "uvicorn>=0.54,<1",
+]
+
+[project.scripts]
+meetai = "meetai.cli:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1,<10",
+    "ruff>=0.16.10,<0.17",
+    "mypy>=2.4,<3",
+    "httpx>=0.28,<1",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/meetai"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "."]
+# A traceback that prints frame locals would print the raw settings override
+# mapping, which can hold a credential. Keep tracebacks value-free.
+addopts = "--tb=short --strict-markers"
+
+[tool.ruff]
+line-length = 90
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W",    # pycodestyle
+    "F",         # pyflakes
+    "I",         # isort
+    "UP",        # pyupgrade
+    "B",         # flake8-bugbear
+    "SIM",       # flake8-simplify
+    "RUF",       # ruff-specific
+    "ANN",       # missing annotations
+    "S",         # flake8-bandit
+    "G",         # flake8-logging-format
+    "LOG",       # flake8-logging
+    "TRY",       # tryceratops
+    "PTH",       # use pathlib
+    "RET",       # flake8-return
+    "C4",        # comprehensions
+]
+ignore = [
+    "ANN401",  # Any is legitimate for **overrides
+    "TRY003",  # long messages outside exception class: our messages are the UX
+    "E501",    # line length is enforced by the formatter
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests assert on private behaviour and use assert by design. S104/S105 fire
+# on the addresses and canary credentials that are the test inputs; TRY301
+# fires on raising inside try, which is how exception handling is exercised.
+"tests/**" = ["S101", "S104", "S105", "ANN001", "SLF001", "TRY301"]
+
+[tool.mypy]
+python_version = "3.12"
+files = ["src", "tests"]
+strict = true
+warn_unreachable = true
+# A pydantic-aware plugin is not needed for strict mode here, but the settings
+# model relies on pydantic's own typing, so keep its stubs authoritative.
+plugins = []
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+# Test helpers take pytest fixtures whose types pytest already declares.
+disallow_untyped_decorators = false
+
+[[tool.mypy.overrides]]
+# `gpulock` checks `sys.platform` and implements both branches. On Windows
+# mypy narrows the check and proves the POSIX branch dead, which is true of
+# this machine and false of the code. Scoped to the one module, and only this
+# one check, so a genuine unreachable statement elsewhere still fails.
+module = ["benchmarks.gpulock", "gpulock"]
+warn_unreachable = false
+
+[[tool.mypy.overrides]]
+# `benchmarks/` is deliberately outside `files` so the src-scoped invariants
+# (no network modules, no values in exception messages) stay true rather than
+# being widened. The ASR scorer therefore is not on mypy's path, and the test
+# that exercises it imports it by sys.path. Scoped to this one module name so
+# a genuinely missing import elsewhere still fails.
+module = ["scoring", "make_noise_group", "postprocess_asr", "gpulock"]
+ignore_missing_imports = true

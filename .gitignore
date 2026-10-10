@@ -1,0 +1,140 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
+# Coverage's database. It was tracked until 2026-10-10: it leaks nothing
+# personal - measured, two D:\ paths and no account name - but it is a
+# build artifact, and a repository about to be published should not carry
+# one.
+.coverage
+.coverage.*
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# MeetAI: secrets - never commit
+.env
+.env.*
+!.env.example
+secrets/
+*.key
+*.pem
+token*.json
+credentials*.json
+
+# MeetAI: runtime state
+var/
+logs/
+models/
+
+# MeetAI: anything that could hold meeting content.
+# Audio containers, including the ones Discord/Opus actually produce, plus
+# transcript and subtitle shapes and the JSONL a log sink would write.
+*.wav
+*.mp3
+*.opus
+*.ogg
+*.oga
+*.m4a
+*.aac
+*.flac
+*.webm
+*.mp4
+*.mkv
+*.raw
+*.pcm
+*.dca
+*.srt
+*.vtt
+*.jsonl
+*.transcript
+
+# A single directory for any capture, so nothing escapes via a new extension.
+media/
+
+# MeetAI: model weights. Both by extension and by directory, because the
+# directory alone was not enough: `git check-ignore` showed a stray
+# `weights.gguf` at the repository root was committable, and a multi-GB blob
+# is not something to notice in review.
+*.gguf
+*.safetensors
+*.ct2
+*.nemo
+*.onnx
+*.pt
+*.pth
+*.bin
+
+# MeetAI: benchmark output. Machine-written measurements go under var/, which
+# is already ignored; these patterns are the backstop for the ones written
+# somewhere else by accident. Results can embed prompts and ASR hypotheses,
+# which is content-shaped text, and git history does not forget.
+bench*.json
+bench*.csv
+*-bench.json
+benchmarks/out/
+benchmarks/*.json
+
+# MeetAI: dataset manifests. Read-speech corpora ship .tsv/.csv manifests that
+# contain the reference transcripts; the audio is ignored above but the
+# transcript file would not be.
+*.tsv
+data/
+
+# OS / editor
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# MeetAI: speech corpora arrive as archives. The extract is covered by data/
+# and var/; the archive landing anywhere else was not. Verified with
+# `git check-ignore`: `dev.tar.gz` at the repository root was committable.
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+*.7z
+
+# MeetAI: reference transcripts and ASR hypotheses as plain text. This is the
+# worst of the gaps found: VIVOS ships its references as `prompts.txt`, and
+# whisper.cpp writes -otxt/-ocsv/-olrc next to the input clip by default. An
+# ASR hypothesis of meeting-like speech is content-shaped text, and a
+# reference transcript is the thing itself.
+*.txt
+!*.example.txt
+# Pinned benchmark prompts are configuration, not data. A prompt that is
+# not committed makes its run unreproducible, which defeats the point of
+# hashing it into the artifact. Narrow on purpose: this directory holds
+# prompts only, never reference text or hypotheses.
+!benchmarks/prompts/
+!benchmarks/prompts/*.txt
+*.csv
+*.lrc
+*.ctm
+*.stm
+*.trn
+*.lab
+*.TextGrid
+*.log
+
+# MeetAI: `benchmarks/*.json` matches one level only. `git check-ignore`
+# showed `benchmarks/asr/hyp.json` was committable, and `bench*.json` does not
+# catch it because the basename does not start with "bench".
+benchmarks/**/*.json
+*derived.json
+# Exact lock names only. A broad `*.lock` was tried and it swallowed the
+# tracked `uv.lock` - caught by tests/test_gitignore.py's second direction.
+.bench_asr.lock
+.meetai-gpu-benchmark.lock
+
+# MeetAI: scratch directories a careless run would create.
+scratch/
+out/
+
+# MeetAI: unaudited native blobs. Not a content leak, but a 685 MB binary is
+# not something to notice in review and git history does not forget.
+*.exe
+*.dll
