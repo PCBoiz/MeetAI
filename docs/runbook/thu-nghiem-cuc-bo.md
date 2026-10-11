@@ -2,7 +2,7 @@
 title: "Runbook — thử nghiệm cục bộ MeetAI"
 owner: "Sơn"
 created: "2026-10-10"
-last_updated: "2026-10-10 (lượt 35)"
+last_updated: "2026-10-11 (lượt 51)"
 purpose: "Sơn chạy được gì hôm nay, bằng lệnh nào, kết quả chứng minh điều gì — và điều gì nó KHÔNG chứng minh."
 ---
 
@@ -32,7 +32,7 @@ Một thứ **có thể chạy** mà **chưa được phép** thì không đư�
 
 | | **A — dry-run tổng hợp** | **B — model local trên fixture** | **C — Discord sandbox** |
 |---|---|---|---|
-| **Lệnh** | `uv run meetai dry-run` | *(chưa có lệnh hợp lệ)* | *(không có)* |
+| **Lệnh** | `uv run meetai dry-run` | *(chưa có lệnh chạy hợp lệ)* — trạng thái cổng: `uv run python -m benchmarks.readiness` | *(không có)* |
 | **Input** | 9 card + 12 case **hằng số trong module**, không đọc file nào | GGUF đã staged + corpus tổng hợp | server Discord thật |
 | **Output** | text hoặc JSON ra stdout; **0 ghi đĩa** | JSON artifact dưới `var/bench/` | — |
 | **Có thể chạy ngay** | **CÓ** (đo: exit 0) | **một phần** — xem mục 4 | **KHÔNG** |
@@ -123,6 +123,48 @@ request đổi trạng thái cần header `X-MeetAI-Request: 1` và phải là P
 Bind thất bại → exit 4 và **không tự đổi cổng**.
 
 ## 4. Cấp B — điều kiện TRƯỚC khi một phép thử model thật được phép chạy
+
+### 4.0 Hỏi máy, đừng hỏi tài liệu này — `benchmarks.readiness` (lượt 51)
+
+```bash
+uv run python -m benchmarks.readiness          # exit 3 khi còn cổng mở
+uv run python -m benchmarks.readiness --json   # cùng dữ liệu, máy đọc
+```
+
+**Vì sao tồn tại:** mục 4 dưới đây là **văn xuôi**, và văn xuôi là thứ bị lệch.
+Một runbook viết *"ngưỡng RAM còn pending"* vẫn đọc rất thuyết phục sau khi có
+người duyệt một ngưỡng. Lệnh này đọc **đúng các hằng số mà chính các cổng đọc**,
+nên nó không thể không khớp với phép cưỡng chế.
+
+**Đo 2026-10-11:** `exit 3`, **4/4 cổng còn mở** —
+`llm-cpu-ram`, `asr-cpu-ram`, `model-digest`, `egress-isolation`.
+
+**Nó KHÔNG phải một phép chạy, và tự nói thế bằng dữ liệu** (`is_permission_to_run:
+false`): exit `0` chỉ có nghĩa **bốn cổng đó** có giá trị đã duyệt. Những điều kiện
+cấp B **không biểu diễn được bằng một hằng số** — chọn phương pháp đo (A/B/C), chọn
+model, và phép chạy có giám sát — vẫn nằm ở mục 4a–4d và **không** vào exit code.
+
+**Chỉ đọc, và được ghim bằng test:** không subprocess, không mạng, không ghi file,
+**không đọc bộ nhớ trống**, không model, không GPU. Việc **không** đọc RAM trống là
+cố ý: cả bốn cổng từ chối vì **vắng một chính sách đã duyệt**, mà không lượng RAM
+nào đổi được điều đó — in một con số bộ nhớ cạnh một lần từ chối chính sách đúng là
+cách khiến người chạy đi đóng bớt process rồi thử lại. `preflight` phân tách y như
+vậy, và vì cùng lý do.
+
+**Bằng chứng xoá-là-fail:** 28 phương thức test / **31 ca** thu được, **9/9 mutation
+đỏ** (gồm: báo cáo luôn nói pending · `all()` thành `any()` · in **giá trị** digest ·
+`main` luôn exit 0 · chữ có dấu lọt ra console · thêm một câu tuyên bố sẵn sàng · đọc
+RAM trống · bỏ một cổng khỏi `GATE_IDS` · `live_source` đọc hằng số qua `getattr` có
+default). Lần mutation **đầu** cho kết quả xanh **không** phải test mù: nó rơi vào một
+nhánh `else` **không tới được**, nên không chứng minh gì — chạy lại trên nhánh quan sát
+được thì **đỏ**.
+
+**Phần dư đã ghi:** `GATE_IDS` là một tuple **viết tay**. Một cổng thứ năm có thể được
+thêm vào `preflight` mà không xuất hiện ở đây; test đòi **một probe hành vi cho mỗi
+gate id**, nên một cổng được *đổi tên* hay *thêm vào báo cáo* mà không ai kiểm hành vi
+thật thì fail — nhưng một cổng **chưa bao giờ được thêm vào báo cáo** thì không test
+nào thấy.
+
 
 **Chưa chạy — và từ lượt 29, điều đó được CƯỠNG CHẾ chứ không chỉ được ghi.**
 

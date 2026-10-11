@@ -740,6 +740,41 @@ bước nhầm đúng kiểu đó.
 **Không** tạo alias mặc định, **không** đổi logic addressing, **không** thêm caller
 runtime, **không** mở Gate 0-C.
 
+### Lượt 51 — báo cáo readiness chỉ đọc cho cấp B
+
+**Khoảng trống thật, khảo sát trước khi viết:** `benchmarks/preflight.py` và
+`artifacts.py` **không có** `__main__` nào, và không lệnh nào trong repo trả lời
+*"cấp B còn thiếu gì"*. `meetai status` báo capability và quyết định đang chờ, nhưng
+bốn cổng cấp B nằm trong `benchmarks/`, mà `src/` **không** (và không được) import
+`benchmarks`. Nên câu trả lời chỉ tồn tại dưới dạng **văn xuôi** trong runbook mục 4.
+
+**Lát này:** `benchmarks/readiness.py` — chỉ đọc, đọc đúng các hằng số mà chính các
+cổng đọc, in 4 cổng, exit **3** khi còn cổng mở. Đặt trong `benchmarks/` vì chiều phụ
+thuộc là `benchmarks -> meetai`; đảo chiều sẽ khiến cấp A có thể bị một cổng benchmark
+chặn, và có test AST ghim chiều đó.
+
+| Tiêu chí nghiệm thu | Kết quả |
+|---|---|
+| Liệt kê đúng 4 cổng, trạng thái từ hằng số sống, exit 3 khi còn mở | **đạt** — đo: exit 3, 4/4 mở |
+| Output ASCII | **đạt** (test, cho cả source live và all-approved) |
+| Không subprocess/mạng/ghi file/đọc bộ nhớ/đổi env | **đạt** — test hành vi, không chỉ test import |
+| Verdict khớp **hành vi** của chính hàm cổng (refuse ⇔ pending) | **đạt** — probe gọi hàm thật, không khẳng định lại hằng số |
+| Không bao giờ tuyên bố sẵn sàng | **đạt** — kiểm cả với source all-approved, là hướng nguy hiểm |
+| Source all-approved làm mọi dòng **đổi** và exit 0 | **đạt** — nếu thiếu, một "pending" hardcode sẽ qua hết |
+| Thêm gate mà không có probe hành vi → fail | **đạt** |
+| Không in **giá trị** digest | **đạt** — canary qua cả hai renderer |
+| Cấp A không đi qua cổng nào ở trên | **đạt** — AST trên toàn `src/` |
+
+**Bài học lặp lại lần thứ ba:** mutation đầu tiên cho kết quả **xanh** và câu trả lời
+đúng **không** phải "test mù" mà là **mutation vô hiệu** — nó rơi vào nhánh `else`
+không tới được. Chạy lại trên nhánh quan sát được: **đỏ**. 9/9.
+
+**Phần dư:** `GATE_IDS` viết tay — một cổng thứ năm **chưa bao giờ** được thêm vào báo
+cáo thì không test nào thấy. Đã ghi, không che.
+
+**Không** chạy model/GPU/benchmark, **không** đặt ngưỡng, **không** ghim digest,
+**không** đổi `EGRESS_ISOLATION_ATTESTED`, **không** mở cổng nào.
+
 ## Lô tiếp theo
 
 **Giữ cấp A; tiếp tục việc không cần model.** Phương án A cho RAM đã được chọn:
