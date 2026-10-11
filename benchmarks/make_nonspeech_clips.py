@@ -31,14 +31,25 @@ import json
 import math
 import pathlib
 import struct
+import sys
 import wave
+
+# The repository root, because `benchmarks.artifacts` is imported by package
+# path and sys.path[0] is this directory when the file is run as a script.
+sys.path.insert(1, str(pathlib.Path(__file__).resolve().parent.parent))
+
+from benchmarks.artifacts import artifact_path
 
 RATE = 16000
 """16 kHz mono, which is what whisper.cpp wants and what every Vietnamese
 read-speech corpus ships."""
 
-CLIP_ROOT = pathlib.Path("var/asr/clips")
-MANIFEST = pathlib.Path("var/asr/manifest-nonspeech.json")
+# S2.1 decision #2: the artifact root is fixed. These resolve to exactly the
+# same places the literals named - the helper adds validation, not a new
+# location - and they match `make_noise_group.py`, the sibling generator that
+# already routes its manifest this way.
+CLIP_ROOT = artifact_path("asr", "clips")
+MANIFEST = artifact_path("asr", "manifest-nonspeech.json")
 
 
 def _write(path: pathlib.Path, samples: list[float]) -> None:

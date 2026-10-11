@@ -42,6 +42,222 @@ class TestMisrepresentationChecks:
         with pytest.raises(AdapterMisrepresentationError):
             _Adapter(AdapterCapabilities(platform=name, version="1", synthetic=True))
 
+    #: Names the matcher does **not** catch today. This is a ledger of a known
+    #: gap, in the sense ``AGENTS.md`` means: "một lỗ đã biết nằm trong suite
+    #: tốt hơn một lỗ phát hiện trong pilot". It is **not** a list of names
+    #: that are safe to use.
+    KNOWN_UNMATCHED_NEAR_MISSES = ("discord-real", "Discord Bot", "zoom.us", "my-teams")
+
+    def test_the_matcher_is_exact_and_these_near_misses_get_through(self) -> None:
+        """A measured limit, recorded rather than hidden or quietly widened.
+
+        **[CHỐT THEO ỦY QUYỀN CỦA SƠN QUA CODEX] 2026-10-11: do not extend.**
+        The matcher stays an exact comparison after ``strip().lower()`` against
+        the existing reserved names. Prefix, suffix, substring or fuzzy
+        matching is **not** added, because no measurement shows it is needed
+        and a wider rule would start rejecting legitimate synthetic names -
+        trading a hole nobody has hit for false refusals nobody asked for.
+
+        So these names construct successfully today. That is the hole, stated
+        plainly. **It is not evidence that such an adapter is safe**, and
+        nothing here should be read as approving the names: a synthetic
+        adapter calling itself "discord-real" is still misleading to a human,
+        and the only reason this is tolerable is the separate fact asserted in
+        :meth:`test_a_near_miss_name_still_cannot_hide_that_it_is_synthetic`.
+
+        If anyone widens the matcher, this test fails, and the right response
+        is to move the name out of the ledger - not to delete the test.
+        """
+        for name in self.KNOWN_UNMATCHED_NEAR_MISSES:
+            adapter = _Adapter(
+                AdapterCapabilities(platform=name, version="1", synthetic=True)
+            )
+            assert adapter.capabilities.platform == name, (
+                f"{name!r} is now refused. The matcher was widened; update "
+                "KNOWN_UNMATCHED_NEAR_MISSES and say so in the documents."
+            )
+
+    def test_a_near_miss_name_still_cannot_hide_that_it_is_synthetic(self) -> None:
+        """What makes the gap above tolerable, asserted rather than assumed.
+
+        The name is not the control. ``synthetic=True`` is, and it survives
+        whatever the platform is called - so a consumer deciding whether a
+        result counts as real integration evidence has a field to read that a
+        misleading name cannot touch. If that ever stopped being true, the
+        recorded gap would stop being tolerable and would need closing.
+        """
+        for name in self.KNOWN_UNMATCHED_NEAR_MISSES:
+            capabilities = _Adapter(
+                AdapterCapabilities(platform=name, version="1", synthetic=True)
+            ).capabilities
+            assert capabilities.synthetic is True
+            assert capabilities.as_dict()["synthetic"] is True
+            assert capabilities.supports_inbound_audio is False
+
+    def test_the_reserved_names_are_still_refused(self) -> None:
+        """The other direction, so "do not extend" cannot become "do nothing".
+
+        Without this beside the ledger, deleting the check entirely would make
+        every near-miss test pass and the suite would report no problem.
+        """
+        for name in ("discord", "google meet", "zoom", "teams", "slack"):
+            with pytest.raises(AdapterMisrepresentationError, match="ten platform that"):
+                _Adapter(AdapterCapabilities(platform=name, version="1", synthetic=True))
+
+    #: Values that look like a citation and are not one. Measured on the real
+    #: constructor before this slice: every one of these was accepted while
+    #: the adapter claimed inbound audio. ``""`` was already refused, by the
+    #: plain truthiness check that used to be the whole rule.
+    NON_EVIDENCE = ("", "   ", "\t\n ", "TODO", " TODO ", "N/A", "n/a", "ToDo")
+
+    #: Deliberately **not** rejected. Widening past the two placeholders the
+    #: decision names would be guessing at what an operator meant, and a
+    #: citation system that second-guesses its input starts refusing real
+    #: ones. Kept as a test so the boundary is visible rather than implied.
+    NOT_PLACEHOLDERS = ("na", "none-yet", "TODO-1234", "ticket n/a-7")
+
+    @pytest.mark.parametrize("evidence", NON_EVIDENCE)
+    def test_a_placeholder_is_not_evidence_for_inbound_audio(self, evidence: str) -> None:
+        """**[CHỐT THEO ỦY QUYỀN CỦA SƠN QUA CODEX] 2026-10-11.**
+
+        ``evidence`` is documented as a short citation - a URL, a ticket, a
+        test manifest. Empty or blank is not one, and neither are the exact
+        placeholders ``TODO`` and ``n/a`` once trimmed and case-folded. The
+        gate exists so a capability is claimed *together with* what
+        substantiates it; a claim substantiated by the word "TODO" is the
+        claim without the substantiation.
+        """
+        with pytest.raises(AdapterMisrepresentationError, match="0-S"):
+            _Adapter(
+                AdapterCapabilities(
+                    platform="discord",
+                    version="1",
+                    synthetic=False,
+                    supports_inbound_audio=True,
+                    evidence=evidence,
+                )
+            )
+
+    @pytest.mark.parametrize("evidence", NON_EVIDENCE)
+    def test_a_placeholder_is_not_evidence_for_speaker_mapping_either(
+        self, evidence: str
+    ) -> None:
+        """Speaker mapping rides the same check, so it is asked the same way.
+
+        The module notes that mapping-without-audio is already refused, so the
+        audio branch subsumes the mapping one. That makes this a test of the
+        combination an adapter would really declare, not of a second rule.
+        """
+        with pytest.raises(AdapterMisrepresentationError, match="0-S"):
+            _Adapter(
+                AdapterCapabilities(
+                    platform="discord",
+                    version="1",
+                    synthetic=False,
+                    supports_inbound_audio=True,
+                    supports_speaker_mapping=True,
+                    evidence=evidence,
+                )
+            )
+
+    def test_a_real_citation_is_still_accepted(self) -> None:
+        """The contract is unchanged for anything that is actually a citation.
+
+        Without this, refusing everything would satisfy the cases above and
+        the suite would call it stricter.
+        """
+        for citation in (
+            "https://discord.com/developers/docs/topics/voice-connections",
+            "ticket MEET-412",
+            "tests/manifest/0-S-trace.json",
+        ):
+            adapter = _Adapter(
+                AdapterCapabilities(
+                    platform="discord",
+                    version="1",
+                    synthetic=False,
+                    supports_inbound_audio=True,
+                    evidence=citation,
+                )
+            )
+            assert adapter.capabilities.evidence == citation
+
+    @pytest.mark.parametrize("evidence", NOT_PLACEHOLDERS)
+    def test_the_placeholder_list_is_not_widened_by_guesswork(
+        self, evidence: str
+    ) -> None:
+        """The boundary of the decision, pinned in the other direction.
+
+        ``na``, ``TODO-1234`` and ``ticket n/a-7`` are **not** on the list.
+        Substring or fuzzy matching would catch them and would also start
+        refusing real citations that merely contain those letters - trading a
+        hole nobody has hit for false refusals nobody asked for. If the list
+        is ever widened, that is a decision with evidence behind it, and this
+        test is where it gets recorded.
+        """
+        adapter = _Adapter(
+            AdapterCapabilities(
+                platform="discord",
+                version="1",
+                synthetic=False,
+                supports_inbound_audio=True,
+                evidence=evidence,
+            )
+        )
+        assert adapter.capabilities.evidence == evidence
+
+    @pytest.mark.parametrize("evidence", NON_EVIDENCE)
+    def test_adapters_that_claim_nothing_are_unaffected(self, evidence: str) -> None:
+        """The check is about a *claim*, so no claim means nothing to check.
+
+        A control-plane-only adapter may carry whatever it likes in that
+        field; it is not substantiating anything with it.
+        """
+        adapter = _Adapter(
+            AdapterCapabilities(
+                platform="meetai-fixture",
+                version="1",
+                synthetic=False,
+                supports_control=True,
+                supports_inbound_audio=False,
+                supports_speaker_mapping=False,
+                evidence=evidence,
+            )
+        )
+        assert adapter.capabilities.supports_inbound_audio is False
+
+    @pytest.mark.parametrize("evidence", NON_EVIDENCE)
+    def test_the_refusal_never_echoes_the_rejected_value(self, evidence: str) -> None:
+        """A rejected value must not travel in the message.
+
+        ``evidence`` is operator-supplied text that ends up in reports, and
+        this project has already closed one leak of that shape in the
+        benchmark CLIs. The message describes the shape of the problem, so an
+        implementation that helpfully quoted what it rejected - the obvious
+        ``f"... {evidence!r}"`` - fails here.
+
+        Asked of every rejected value rather than of a planted canary: the
+        values that *are* rejected are exactly the short placeholders, so a
+        canary cannot be smuggled inside one without making it something else
+        that is legitimately accepted.
+        """
+        with pytest.raises(AdapterMisrepresentationError) as caught:
+            _Adapter(
+                AdapterCapabilities(
+                    platform="discord",
+                    version="1",
+                    synthetic=False,
+                    supports_inbound_audio=True,
+                    evidence=evidence,
+                )
+            )
+        rendered = str(caught.value)
+        trimmed = evidence.strip()
+        if trimmed:
+            assert trimmed not in rendered, (
+                f"the refusal quoted the value it rejected: {rendered!r}"
+            )
+
     def test_real_adapter_claiming_inbound_audio_needs_evidence(self) -> None:
         """Gate 0-S: the claim cannot be made without something backing it."""
         with pytest.raises(AdapterMisrepresentationError, match="0-S"):
@@ -161,17 +377,78 @@ class TestBlockedDiscordAdapter:
         assert health.connected is False
         assert "0-S" in health.detail
 
-    @pytest.mark.parametrize("method", ["join", "leave", "participant_events"])
-    def test_every_operation_raises(self, method: str) -> None:
-        """No partially-working integration to accidentally rely on."""
+    @pytest.mark.parametrize("method", ["join", "participant_events"])
+    def test_every_operation_that_reaches_discord_raises(self, method: str) -> None:
+        """No partially-working integration to accidentally rely on.
+
+        ``leave`` is deliberately **not** in this list any more - see
+        :meth:`test_leave_is_safe_when_never_joined`. Everything that would
+        have to *reach* Discord still refuses.
+        """
         adapter = BlockedDiscordAdapter()
         with pytest.raises(NotImplementedError, match="0-S"):
             if method == "join":
                 adapter.join("some-channel")
-            elif method == "leave":
-                adapter.leave()
             else:
                 list(adapter.participant_events())
+
+    def test_leave_is_safe_when_never_joined(self) -> None:
+        """``ControlPlane.leave`` says "must be safe to call when not joined".
+
+        Raising broke that contract, and the contract is the useful one: a
+        caller unwinding after a failure should not have to know whether the
+        join succeeded. A cleanup verb on an adapter that has never joined has
+        nothing to undo, so "you are not in a channel" is already true.
+
+        **This opens no Discord capability.** Nothing here connects, and
+        :meth:`test_leave_changes_nothing_a_caller_could_act_on` asserts the
+        rest of the surface is untouched by calling it.
+        """
+        BlockedDiscordAdapter().leave()
+
+    def test_leave_is_idempotent(self) -> None:
+        """Repeatedly, because once-only would still fail an unwind path."""
+        adapter = BlockedDiscordAdapter()
+        for _ in range(3):
+            adapter.leave()
+
+    def test_leave_changes_nothing_a_caller_could_act_on(self) -> None:
+        """The negative half: a no-op must also be a no-change.
+
+        Without this, implementing ``leave`` as something that set a flag, or
+        flipped a capability, would satisfy the two tests above. The adapter
+        has to look exactly the same afterwards.
+        """
+        adapter = BlockedDiscordAdapter()
+        before = adapter.capabilities.as_dict()
+        before_health = adapter.health()
+
+        adapter.leave()
+
+        assert adapter.capabilities.as_dict() == before
+        after_health = adapter.health()
+        assert (after_health.connected, after_health.detail) == (
+            before_health.connected,
+            before_health.detail,
+        )
+        assert adapter.capabilities.supports_control is False
+        assert adapter.capabilities.supports_inbound_audio is False
+        # The operations that would reach Discord still refuse afterwards.
+        with pytest.raises(NotImplementedError, match="0-S"):
+            adapter.join("some-channel")
+        with pytest.raises(NotImplementedError, match="0-S"):
+            adapter.send_text(MeetingContent("hello"))
+
+    def test_the_docstring_no_longer_claims_every_operation_raises(self) -> None:
+        """The sentence was accurate until this slice; now it would mislead.
+
+        Checked rather than trusted, because a docstring that contradicts the
+        code is how the next reader concludes ``leave`` is still blocked and
+        writes a workaround for it.
+        """
+        doc = BlockedDiscordAdapter.__doc__ or ""
+        assert "Every operation raises" not in doc
+        assert "leave" in doc, "the docstring should say what leave does instead"
 
     def test_send_text_raises(self) -> None:
         with pytest.raises(NotImplementedError, match="0-S"):

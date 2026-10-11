@@ -175,9 +175,21 @@ Không cần trả lời bây giờ.
 - **MeetAI được gọi bằng gì** — alias registry rỗng cố ý.
 - **Consent TTL** — mặc định `None`, **[ĐỀ XUẤT]**.
 - **Calendar OAuth app** (`M-7`) — tác động ra ngoài, cần xác nhận trước.
-- **`evidence` truthiness** — `" "`, `"TODO"`, `"n/a"` hiện **đều** thoả
+- ~~**`evidence` truthiness**~~ — **ĐÃ SỬA lượt 48,**
+  **[CHỐT THEO ỦY QUYỀN CỦA SƠN QUA CODEX]**: chuỗi rỗng, chuỗi chỉ có khoảng
+  trắng, và hai giá trị giữ chỗ **chính xác** `TODO` / `n/a` (sau trim, không
+  phân biệt hoa thường) **không còn** thoả điều kiện evidence. **Đo trước khi
+  sửa trên đường gọi thật:** `""` vốn đã bị chặn bởi phép kiểm truthiness, còn
+  `"   "`, `"\t\n "`, `"TODO"`, `" TODO "`, `"N/A"`, `"n/a"` **đều lọt** —
+  không lớp nào khác chặn chúng. **Cố ý KHÔNG mở rộng** sang substring/fuzzy:
+  `"na"`, `"TODO-1234"`, `"ticket n/a-7"` vẫn được nhận, và có test ghim
+  ranh giới đó. *(Nội dung cũ giữ làm lịch sử:)* `" "`, `"TODO"`, `"n/a"`
+  hiện **đều** thoả
   "có evidence". Sửa là **thay đổi hành vi**, nên **không** làm ở lượt này.
-- **`BlockedDiscordAdapter.leave()` raise** trái hợp đồng `ControlPlane.leave`
+- ~~**`BlockedDiscordAdapter.leave()` raise**~~ — **ĐÃ QUYẾT lượt 47,**
+  **[CHỐT THEO ỦY QUYỀN CỦA SƠN QUA CODEX]**: đổi thành **no-op idempotent**,
+  đúng hợp đồng. *(Nội dung cũ giữ lại làm lịch sử:)* raise trái hợp đồng
+  `ControlPlane.leave`
   (*"must be safe to call when not joined"*), và **có test ghim việc raise**.
   Sửa kiểu nào cũng đảo một assertion hoặc làm yếu một hợp đồng.
   **[ĐỀ XUẤT]** cho `leave()` im lặng trả về — nó là động từ **dọn dẹp**, và
@@ -187,10 +199,30 @@ Không cần trả lời bây giờ.
   `ConsentScope` nào; permit có chết khi **revoke** (không chỉ khi close) không;
   một phiên **không có** sink đăng ký là lỗi hay bình thường. Hiện lấy vị trí
   **hẹp nhất rõ ràng đúng**: permit chết cùng gate, không khẳng định gì thêm.
-- **Sensitivity theo field hay theo card** — hồ sơ nói field-level, code làm
-  card-level.
-- **Chỗ đặt phép kiểm scope** — ba tài liệu nói ba chỗ.
-- **Mở rộng matcher tên platform** — hiện khớp **đúng token**, nên
+- ~~**Sensitivity theo field hay theo card**~~ — **KHÔNG phải một quyết định;**
+  mục này dựa trên một lần **đọc nhầm**, đã đo ở lượt 46. Hồ sơ bàn giao dòng
+  136 liệt kê `sensitivity` **trong danh sách field tối thiểu của một knowledge
+  card** — tức **card-level**, đúng y như code (`KnowledgeCard.sensitivity`).
+  Thứ đọc thành field-level là `visibility` của **Profile** ở dòng 128, một
+  **thực thể khác**. Nay có test ghim: `sensitivity` là field của card và
+  **không** phải của `EvidenceClause`.
+- ~~**Chỗ đặt phép kiểm scope**~~ — **KHÔNG còn là câu hỏi mở;** `docs/spec.md`
+  đã ghi đúng từ trước rằng scope **bind ở retrieval và không ở tầng nào dưới**.
+  Lượt 46 **đo lại và thêm bằng chứng**: `assess()` không có tham số `scope`
+  (hỏi chữ ký thật); sáu lần `scope` xuất hiện trong `answerability.py` **đều là
+  prose**, không lần nào là code (hỏi AST); và phép so `card.scope == scope`
+  nằm trong `KnowledgeStore.retrieve`. **Phần CÒN chờ Sơn** là phần spec vốn
+  đã nói: *một câu hỏi trong họp map sang scope nào* — đó là quyết định sản
+  phẩm, không phải vị trí của cơ chế.
+- ~~**Mở rộng matcher tên platform**~~ — **ĐÃ QUYẾT lượt 47,**
+  **[CHỐT THEO ỦY QUYỀN CỦA SƠN QUA CODEX]: KHÔNG mở rộng.** Giữ so khớp **chính
+  xác** sau `strip().lower()` với allowlist đã có. Lý do: chưa có phép đo nào chứng
+  minh cần mở rộng, và một luật rộng hơn sẽ bắt đầu **từ chối nhầm** tên synthetic
+  hợp lệ — đổi một lỗ chưa ai chạm lấy những lần từ chối sai không ai yêu cầu.
+  **Giới hạn nay được ghi thành test-ledger** (`discord-real`, `Discord Bot`,
+  `zoom.us`, `my-teams` vẫn lọt), kèm phép kiểm rằng **`synthetic=True` vẫn được
+  báo cáo** dù tên là gì — đó mới là control thật, không phải cái tên. *(Nội dung
+  cũ giữ làm lịch sử:)* hiện khớp **đúng token**, nên
   `"discord-real"`, `"Discord Bot"` qua được như synthetic. **[ĐỀ XUẤT] không
   mở rộng**: không có phép đo nào đỡ một lexicon rộng hơn.
 

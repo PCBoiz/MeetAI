@@ -9,7 +9,7 @@ purpose: "Sơn chạy được gì hôm nay, bằng lệnh nào, kết quả ch�
 # Runbook — thử nghiệm cục bộ
 
 **[CHỐT]** Sơn chọn: làm **cấp A trước**, chuẩn bị **cấp B song song**, và
-**chưa chạy model thật** cho tới khi Sơn chốt 5 quyết định S2.1. Tiêu chí thành
+**chưa chạy model thật**. Năm quyết định S2.1 đã được triển khai theo uỷ quyền; cấp B vẫn bị chặn bởi ngưỡng RAM riêng cho LLM/ASR, digest model chưa ghim và egress OS chưa attested. Tiêu chí thành
 công: không vượt quyền / không rò nội dung; trả lời được khi có bằng chứng; lặp
 lại được; và biết rõ nó không chứng minh gì.
 
@@ -36,10 +36,10 @@ Một thứ **có thể chạy** mà **chưa được phép** thì không đư�
 | **Input** | 9 card + 12 case **hằng số trong module**, không đọc file nào | GGUF đã staged + corpus tổng hợp | server Discord thật |
 | **Output** | text hoặc JSON ra stdout; **0 ghi đĩa** | JSON artifact dưới `var/bench/` | — |
 | **Có thể chạy ngay** | **CÓ** (đo: exit 0) | **một phần** — xem mục 4 | **KHÔNG** |
-| **Được phép chạy** | **CÓ** | **CHƯA** — 5 quyết định S2.1 **đã chốt lượt 35**, nhưng còn **2 ngưỡng RAM** + **lựa chọn A/B/C** + **2 cổng mới cũng từ chối** | **KHÔNG** — Gate 0 còn mở |
+| **Được phép chạy** | **CÓ** | **CHƯA** — năm quyết định S2.1 đã triển khai; hai ngưỡng RAM giữ pending, digest thực chưa ghim, egress OS chưa attested | **KHÔNG** — Gate 0 còn mở |
 | **Đã chứng minh** | xem mục 2 | chưa gì | chưa gì |
 | **Rủi ro** | không đáng kể: không model, không mạng, không ghi | **OOM thật** — mục 4 | rò nội dung họp, vượt quyền |
-| **Blocker** | không | 5 quyết định + mục 4 | Gate 0-S/0-P/0-C/0-U + consent |
+| **Blocker** | không | ngưỡng RAM riêng, digest model, egress OS + mục 4 | Gate 0-S/0-P/0-C/0-U + consent |
 
 ## 2. Cấp A — chạy ngay
 

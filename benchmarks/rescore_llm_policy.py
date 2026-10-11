@@ -27,6 +27,7 @@ import pathlib
 from dataclasses import asdict
 
 from benchmarks import policy_scoring
+from benchmarks.artifacts import artifact_path
 from benchmarks.policy_scoring import (
     FORBIDDEN_FIELD_SHAPES,
     HARNESS_CONFIDENCE,
@@ -56,7 +57,14 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--artifact", default="var/bench/llm-policy-s23.json")
     parser.add_argument("--generations", default="var/probe/llm-policy")
-    parser.add_argument("--out", default="var/bench/llm-policy-s23-rescored.json")
+    parser.add_argument(
+        "--out",
+        default="bench/llm-policy-s23-rescored.json",
+        help=(
+            "output path RELATIVE to the fixed artifact root; a path that "
+            "leaves the root is refused (S2.1 decision #2)"
+        ),
+    )
     args = parser.parse_args()
 
     source = pathlib.Path(args.artifact)
@@ -167,7 +175,12 @@ def main() -> int:
         ],
     }
 
-    out = pathlib.Path(args.out)
+    # S2.1 decision #2, same contract as `bench_llm_policy.py`: this writes
+    # the same class of artifact - a policy scoring result under the fixed
+    # root - from the same `--out` flag, so it is constrained the same way.
+    # `--out` is therefore a path RELATIVE to the artifact root; one that
+    # leaves the root is refused rather than silently rewritten.
+    out = artifact_path(*pathlib.PurePosixPath(args.out).parts)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(derived, indent=2, ensure_ascii=False), encoding="utf-8")
 

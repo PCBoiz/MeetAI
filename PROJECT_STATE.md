@@ -2,7 +2,7 @@
 title: "MeetAI - Trạng thái dự án (sổ ghi bền vững)"
 owner: "Sơn"
 created: "2026-10-07"
-last_updated: "2026-10-10 (lượt 35)"
+last_updated: "2026-10-11 (lượt 49)"
 purpose: "Nguồn ghi nhớ chống mất thông tin khi context bị compact. Mọi lượt làm việc phải đọc file này trước và cập nhật sau."
 ---
 
@@ -20,18 +20,20 @@ purpose: "Nguồn ghi nhớ chống mất thông tin khi context bị compact. M
 
 ## 1. Hiện trạng repository
 
-Cập nhật 2026-10-10 lượt 35. **Mục này phải được làm mới mỗi lượt.**
+Cập nhật 2026-10-11 lượt 49. **Mục này phải được làm mới mỗi lượt.**
+
+**Đối chiếu lượt 42:** đầu lượt HEAD `6bc2b7c`, branch `main`, **104 commit**, tree sạch; khớp báo cáo lượt 41. `Get-Process` xác nhận PID `10588`, `2892`, `24796` đều không tồn tại; CIM query bị chặn. Lượt 42 gia cố test AST truy nguồn đường dẫn tuyến tính cho 5 artifact JSON cuối của harness model; không quét mọi file tạm/generator trong `benchmarks/`.
 
 | Hạng mục | Thực tế |
 |---|---|
-| Git | Repo local, **94 commit** tính đến `a3fc24b` (gốc `8976a42`), branch **`main`** (lượt 34 đổi tên từ `master` theo [CHỐT] của Sơn; chỉ đổi tên ref, không chạm commit). **Chưa có remote, CHƯA push** — `PCBoiz/MeetAI` đo được là **rỗng** (`git ls-remote` exit 0 với **0 ref**; control: một repo không tồn tại cho exit 128), nhưng Sơn [CHỐT] tạm chưa push cho tới khi quyết về username trong lịch sử. *(Ô này **luôn trễ đúng một commit**: commit ghi lại con số không thể tự đặt tên chính nó. Lấy số thật bằng `git rev-list --count HEAD`.)* Repo không đặt `user.name`/`user.email`; truyền qua `git -c` từng lần. |
+| Git | Repo local `D:/MeetAI`, branch `main`, **105 commit sau lát 42**. Lượt 41 commit là `6bc2b7c`; lát 42 đã commit, xem `git log -1` để lấy SHA. Tree sạch; remote chưa được xác minh độc lập. |
 | Code | `src/meetai/` **22 module** + `__init__.py` + `adapters/{base,fake}.py` (đếm bằng `ls`; lượt 18 ghi "20" là lệch). Lượt 19 thêm `retrieval.py` - bước 4 pipeline, framework-free, **metadata + lexical, không embedding** (spec `K-8` cố ý `absent`). |
 | Benchmark | `benchmarks/` **19 module** (lượt 32 thêm `winmem.py`, lượt 35 thêm `artifacts.py`) (đếm bằng `glob('*.py')`; ô này từng ghi "15" và đã lệch — lượt 25 đo được **16**, lượt 26 thêm `refusals.py`). **Lượt 26:** `refusals.py` giữ allowlist 10 `ARTIFACT_ROLES` và `missing_artifact()`; mọi nhánh từ chối sớm in **role**, không in đường dẫn. **Lượt 27 đếm lại từ AST: sáu CLI có 16 kiểm tra artifact** (3/5/2/1/2/3) — lượt 26 ghi "7 nhánh" là **trộn đơn vị** (7 là số *ca test*). Nay **16/16 nhánh có ca cô lập** và **10/10 role** được chạm, khẳng định bằng ma trận so với AST. Lượt 13 thêm `policy_scoring.py` (scorer tất định, pure, test không cần model), `bench_llm_policy.py` (harness S2.3), `rescore_llm_policy.py` (chấm lại từ generation đã lưu, không chạy lại model). **Không** vào `pyproject.toml`. |
-| Test | **5100 pass**, 3 skipped (lượt 33 chạy lại và đối chiếu: 5057 + 40 ca mới của `test_winmem.py` + 3 ca có sẵn trong `test_llm_boundary.py` parametrise theo `benchmarks/*.py` tự phủ module mới = 5100, khớp chính xác. Lượt 30 thêm 9 ở `test_cpu_preflight.py`: cổng ASR CPU `pending` với bằng chứng **riêng**, hai cổng **không phải cùng một hàm**, `bench_asr --cpu` từ chối **không spawn**, control cho đường GPU, và ledger nay ghim *tính chất* "không thể yêu cầu chạy CPU" thay vì tin vào câu lý do. **4 mutation** đều bị bắt. Lượt 29 thêm 53: `test_cpu_preflight.py` **36** — cổng pending, ba lý do từ chối, argv CPU thật, allowlist binary, smoke run end-to-end **không tải model**, và ledger "không harness nào bỏ qua cổng của nó"; `test_measure_environment.py` **16** — trạng thái unavailable có kiểu, từng đường dẫn xuất. **10 mutation** đều bị bắt, trong đó **3 cái lần đầu LỌT** và đã làm test mạnh lên. Lượt 28 thêm 40: `test_local_trial.py` **19** — lặp lại byte-for-byte, không ghi đĩa ở cấp tiến trình, và **đường exit 5 lần đầu được test đầu-cuối** — cộng 6 ở `test_llm_boundary.py` cho **A12** (allowlist executable khớp fragment + không launcher ngoài Python; **3 mutation** bắt bởi 2 cơ chế), cộng mở rộng AST của `test_dryrun.py`. Lượt 27 thêm 16: `test_benchmark_refusal_leaks.py` **12 → 28** = **16 nhánh artifact cô lập** (mỗi nhánh một ca, prerequisite dàn trong `tmp_path`, hằng `WHISPER`/`LLAMA`/`BUILD_DIR` monkeypatch nên **không ca nào đọc `var/`**) + 4 ma trận/đếm + 4 control + 4 cấu trúc; **4 mutation** đều bị bắt. Lượt 26 thêm 14: `test_benchmark_refusal_leaks.py` **12** — **7 ca** chạm **7/16 nhánh** và **4/10 role**, nhánh nào được chạm **phụ thuộc binary có trên máy** — cộng 2 từ guard import benchmark mở rộng theo glob sang `refusals.py`. Lượt 25 thêm 3 ở `test_llm_boundary.py`: guard import benchmark **3/16 → 16/16** tự phát hiện bằng glob. Lượt 23 thêm 6: axes→level **total**, tương ứng enum, và lớp R1b 24/24. Lượt 22 thêm 209, gồm `test_answerability_false_answers.py` **40** ghim 9 đường false answer: corpus answerability 36 -> **51 case**, `test_normalisation_study.py` **19**, cộng 3 test ghim mù ordinal ở retrieval). **Bốn** corpus eval độc lập ở `tests/corpus/`. |
+| Test | **Lượt 42:** full suite bằng `.venv\Scripts\python.exe -m pytest -q` → **5183 passed, 3 skipped, 1 warning**, exit 0. Test mục tiêu `tests/test_benchmark_artifacts.py` → **30 passed**. Ruff format → **145 files**, Ruff lint xanh, mypy → **86 source files**; cả bốn kiểm tra exit 0. Cảnh báo là `StarletteDeprecationWarning` về httpx. `uv run` lần này trả Access denied; không dùng nó để báo kết quả. |
 | Ranh giới quyền hạn | **Lượt 14:** `authority.py` tách tầng subject-free thành `_BARE_PERFORMATIVE` (16 pattern, **không bao giờ** nới được) và `_BARE_REPORTABLE` (4 pattern, trần chỉ được giảm). Thêm `_ASPECT` (slot marker thời/thể) và `_ACTOR`. `test_authority_residual.py` giữ **2121 assertion** của ma trận trường. |
 | Response boundary | **Lượt 15: gate đã có caller.** Trước đó không module nào trong `src/` gọi `evaluate_response`, nên 'mọi output qua gate' là một câu chữ. `boundary.deliver` chạy answerability → authority → sink, và `sink.emit` xuất hiện **đúng một lần** trong toàn `src/` (test AST). `DeliveryOutcome` **không có field text**. **Boundary nội bộ, KHÔNG phải tích hợp production** — `RecordingSink` tới bộ nhớ. |
-| Đường CPU / cấp B | **Lượt 29 — [CHỐT] Sơn chốt ba điều:** cổng RAM CPU **giữ `pending`** (từ chối mọi lần chạy CPU cho tới khi duyệt ngưỡng), **không chạy model nào**, và `--binary` dùng **allowlist basename đóng kín** (`llama-cli.exe`, `llama-bench.exe`). **Đã cưỡng chế, không chỉ ghi:** cả **ba** đường LLM (`bench_llm_policy --device none`, `bench_llamacpp --device none`, `bench_llm --gpu-layers 0`) đều từ chối exit 3. **Audit tự tìm ra một bypass:** cổng ban đầu chỉ bảo vệ **1 trong 5** harness chạy model; hai đường LLM còn lại không có cổng nào, trong đó `bench_llm.py` nạp model **in-process**. **Ba lý do từ chối phân biệt:** ngưỡng chờ duyệt / không có GPU / thiếu RAM. **Lượt 30: bypass thứ hai** — `bench_asr --cpu` cũng là một lần chạy model không GPU và chưa gated; nay có **cổng riêng**, cũng `pending`, **không vay** số 4438 (đó là của Qwen3-4B). Bằng chứng ASR là **n=0**: `var/bench/` không có artifact ASR nào. **Cả bốn** đường CPU nay exit 3, **không đọc RAM, không spawn**. **Lượt 31 nghiên cứu giới hạn tầng OS:** ba đại lượng khác nhau đang bị gọi chung là “RAM” — commit limit của Job object **không chặn weights GGUF** (`SEC_COMMIT` *“has no effect”* cho data file), hard working-set max cưỡng chế bằng **trim/paging** nên biến OOM thành thrashing, và `ullAvailPhys` của cổng ta là **standby+free+zero** nên **không phải “RAM trống”**. Và **OS đã duy trì peak thật** (`PeakWorkingSetSize`) trong khi ta lấy mẫu `tasklist` mỗi 300 ms — nên `4438` là chặn dưới **không cần thiết**. **Lượt 32** thêm `benchmarks/winmem.py` — prototype `ctypes` đọc counter theo **handle** (working set + commit + page fault), **đã kiểm chứng trên API thật**, **chưa nối vào gì**; cả bốn hằng ngưỡng còn `None` và có test khẳng định. |
-| Thử nghiệm cục bộ | **Lượt 28 — [CHỐT] Sơn chọn cấp A trước, cấp B chuẩn bị song song, chưa chạy model thật.** Runbook mới: `docs/runbook/thu-nghiem-cuc-bo.md` (thư mục `runbook/` trước đó **không tồn tại**). **Cấp A đo được:** `uv run meetai dry-run` exit 0, **lặp lại byte-for-byte** 3 lần × 4 lệnh, **0 ghi đĩa** trên snapshot 8901 đường dẫn, câu đã phát **không** vào báo cáo. **Hai lỗ test cũ đã đóng:** `test_the_module_opens_no_file` từng pass `Path(p).open("w")`; và đường **exit 5 chưa được test đầu-cuối** — test cũ chỉ so **hai hằng số**. **Cấp B chưa chạy**: 5 quyết định S2.1 + 6 thiếu sót cơ học + OOM (peak CPU đã đo **4438 MiB**, cổng đang code **3380**, RAM khả dụng **3966**). |
+| Đường CPU / cấp B | Năm quyết định S2.1 đã triển khai theo uỷ quyền. Cấp B vẫn bị chặn riêng bởi RAM LLM, RAM ASR, digest chưa ghim và egress OS chưa attested. Không chạy model. |
+| Thử nghiệm cục bộ | [CHỐT] Cấp A trước, chuẩn bị B song song, chưa chạy model. Runbook chọn phương án A cho RAM: giữ fail-closed. Hai ngưỡng RAM vẫn `None`; mọi model runner tiếp tục bị từ chối. |
 | Dry-run cấp 2 | **Lượt 19: câu hỏi điều khiển việc chọn card.** `meetai dry-run` 12 case qua `retrieval` → `deliver` → `RecordingSink`. Report tự khai cấp độ **bằng dữ liệu**: `is_production_integration=False`, `is_discord_test=False`. |
 | Retrieval | **Lượt 19:** hai tập giữ riêng bằng kiểu - `candidates` (xếp hạng, cắt được) cho model dẫn, `witnesses` (**không bao giờ cắt**) cho verifier. `scope` và `max_sensitivity` **bắt buộc**, không default. **Lượt 20:** chuẩn bị quyết định scope, **không cài** gì phụ thuộc vào nó. |
 | Gate an toàn | **Lượt 20: bằng chứng xoá-là-fail, lần đầu.** 90 test hành vi, 29/29 mutation. **Lượt 21: media sink phải có permit do gate cấp** — hiệu lực là **danh tính** đối tượng, mint đọc policy lúc cấp nên `Settings()` thật **từ chối**, permit **chết cùng gate**. Cộng **allowlist import** (đóng `import discord`), **một** biểu thức giao frame, và chặn khởi tạo lúc import. |
@@ -44,7 +46,7 @@ Cập nhật 2026-10-10 lượt 35. **Mục này phải được làm mới mỗ
 | Normalization | **Lượt 22: đo ba ứng viên ngoài production path**, `answerability.py` **không đổi một dòng**. **R1** (nhận mọi token một ký tự) và **R2** (bảng đồng nghĩa `hạn`/`chốt`) **bị loại bằng phép đo**; **R1b** (nhận token một ký tự **chỉ sau từ chỉ nhãn**) là **[ĐỀ XUẤT]** chờ Sơn. Chặn bằng test **hành vi**: production tokeniser vẫn phải **không** phân biệt được phương án B với phương án C. |
 | Evidence isolation | **Lượt 17:** clause-level evidence — span lỗi thời không còn là bằng chứng, enumeration tách khỏi mâu thuẫn, và approval **gắn với digest lúc duyệt** (`approved_content_hash`). Claim phải được **một** clause đỡ, với polarity khớp. |
 | Preflight VRAM + RAM | **Lượt 18:** từ chối trước khi load nếu free VRAM < **4228 MiB** (peak quy được 2819 × 1.5) **hoặc** RAM khả dụng < **3380 MiB** (working set 2868 + **512 cộng thêm**). Headroom RAM là **cộng chứ không nhân**: VRAM sampling **thiếu** đỉnh nhất thời, Working Set **thừa** so với nhu cầu thật của GGUF mmap. Fail-closed cả khi **không đo được**. Preflight giờ chạy **trong** lock. |
-| Toolchain | Python 3.12.13 (uv), pytest 9.1.1, ruff 0.16.10, mypy 2.4.0 — cả bốn chạy sạch |
+| Toolchain | Python 3.12.13, pytest 9.1.1, ruff 0.16.10, mypy 2.4.0. Lượt 40: pytest **5179 passed, 3 skipped**, ruff format/lint và mypy đều xanh. |
 | Dependency | Runtime 3 gói (`pydantic`, `pydantic-settings`, `python-dotenv`). Extra `ui` **đã cài**: `fastapi==0.142.2`, `uvicorn`. Tổng **32 gói, không đổi ở lượt 8**. Môi trường benchmark tách hẳn ở `var/bench-venv/`, **không** vào `pyproject.toml`/`uv.lock`. |
 | Docs | `AGENTS.md`, `README.md`, `docs/{intent,spec,plan}.md`, `docs/handoff/` (3 tài liệu + README), `docs/adr/0001..**0007**` (0006 có addendum lượt 14), `docs/research/` (dependency inventory + 2 eval report + S2.1 feasibility + model ledger + 2 corpus survey + 2 S2.2 report + **S2.3 LLM policy benchmark**), `benchmarks/README.md` |
 | Secret trong repo | **Không có credential** — rà soát lượt 34 trên **toàn bộ 88 commit** (mọi blob, mọi commit): **0 khớp** cho cả 8 pattern (Discord bot token, GitHub PAT, AWS key, private-key header, Google API key, Slack token, bearer literal, JWT); **0** file audio/video/model/dataset/archive từng tồn tại; **0** path từng bị xoá, nên không có `.env` nào ẩn trong lịch sử; `.env.example` toàn placeholder (mọi giá trị đang comment, hai dòng credential để rỗng). **ĐÍNH CHÍNH:** ô này trước lượt 34 ghi *“Không có username trong file tracked”* — **sai, đo được**. Username Windows xuất hiện **20 lần trong 7 file** tracked hiện tại (`PROJECT_STATE.md` 7, `tests/test_benchmark_refusal_leaks.py` 5, `docs/research/2026-10-10-offline-fail-closed-model-artifact.md` 2, `tests/test_cpu_preflight.py` 2, `tests/test_llm_policy_corpus.py` 2, `benchmarks/refusals.py` 1, `tests/test_answerability_eval.py` 1), và **99 lần trên 8 path** nếu tính mọi bản blob qua 88 commit — path thứ tám là `docs/handoff/README.md`, mà bản hiện tại **đã không còn**. Phần lớn là canary `C:/Users/<user>/secret-staging/model.gguf`, tức **chính cái canary dùng để chứng minh đường dẫn không bị rò lại mang username thật**. **[ĐỀ XUẤT]** đổi canary sang username tổng hợp, vì `AGENTS.md` bước 5 nói *mọi canary là sentinel giả* — nhưng việc đó **không** gột được 88 commit cũ, nên **chờ Sơn quyết** cách xuất bản. **Không có username trong `src/`.** |
@@ -67,7 +69,17 @@ Cập nhật 2026-10-10 lượt 35. **Mục này phải được làm mới mỗ
 
 ## 2. Khoảng cách so với hồ sơ bàn giao
 
-Phase 0 **xong**. Phase 1 **xong**. Phase 2: **S2.1 phần lớn đạt** (lượt 8); **S2.2 phần 1 + 2 đã đo** (lượt 9-11: co-residency, non-speech, scorer, WER FLEURS, noise, ma trận B-1, accent VietMed); **S2.3 đã đo** (lượt 13: 5 trục chính sách LLM riêng, 43 case, 2 run, output tất định). **Cả S2.2 và S2.3 đều `partial/open`**: S2.2 còn `nói chồng`/`accent`/p50-p95; S2.3 còn `chi phí tháng` và `độ ổn định`. **Lượt 25 đo lại S2.1 và viết lại tiêu chí offline** (xem mục 1): chiều *artifact vắng* đạt về cấu trúc, ba chỗ hở khác. **Lượt 26 đóng một trong ba** (lộ đường dẫn trong thông báo từ chối; **lượt 27 đưa độ phủ test của chỗ sửa đó từ 7/16 lên 16/16 nhánh** — không đổi hành vi production). **Lượt 28 đóng A12** và **tìm ra binary listener thứ năm** (`whisper-server.exe`) mà mục 2f của chính tôi đã bỏ sót; lỗ A12 `--binary` là chuỗi tự do **ĐÃ ĐÓNG ở lượt 29** theo quyết định của Sơn — allowlist basename đóng kín (`llama-cli.exe`, `llama-bench.exe`), cưỡng chế **trước** khi spawn. *(Câu này trước lượt 33 vẫn ghi mục đó **cần Sơn quyết**, mâu thuẫn với nhật ký lượt 29 ngay trong file này; nhật ký là nguồn có thẩm quyền vì nó dẫn nguyên văn quyết định, và `benchmarks/refusals.py` cưỡng chế nó.)* Hai chỗ còn lại — digest chưa cưỡng chế và đường HF đã link sẵn — **chờ Sơn quyết**, nên **S2.1 vẫn `[~]` và spec B-3 vẫn `partial`**.
+**Hiện trạng lượt 42:** Cấp A tiếp tục; test B-3 nay truy nguồn đường dẫn tuyến tính của JSON kết quả qua `artifact_path()` thay vì chỉ kiểm tra token helper xuất hiện trong file. Áp dụng riêng cho năm harness model; file tạm, generator và lock thuộc các lớp ghi khác. Full suite và bốn kiểm tra xanh. Không chạy model/GPU, `src/` không đổi, không cổng nào mở. PID pytest trong báo cáo lượt 41 đều không tồn tại khi kiểm tra trực tiếp.
+
+**Trạng thái hiện tại (lượt 36):** Phase 0 và Phase 1 hoàn tất; S2.1 vẫn
+partial, không phải vì năm quyết định chính sách còn chờ mà vì bốn điều kiện
+chạy model chưa đạt: ngưỡng RAM riêng cho LLM/ASR, digest mô hình được ghim, và
+cô lập egress tầng OS được thiết lập/attest. Phương án RAM **A — giữ fail-closed**
+đã được chọn từ trước và tiếp tục giữ nguyên; không chạy model. S2.2/S2.3 vẫn
+`partial/open`; Gate 0-S/0-P/0-C/0-U vẫn mở. Dùng khối này và `docs/plan.md` cho
+trạng thái hiện tại; các đoạn lịch sử phía dưới không thay cho đối chiếu này.
+
+Lịch sử Phase 0/1/2 và các phép đo S2.2/S2.3 bên dưới là nhật ký theo thời điểm, không phải trạng thái mới nhất. Các mốc hiện hành được đối chiếu ở đầu mục này và trong `docs/plan.md`: năm quyết định S2.1 đã triển khai theo uỷ quyền ở lượt 35; S2.1 vẫn partial do các điều kiện chạy model chưa có bằng chứng. S2.2/S2.3 vẫn `partial/open`; Gate 0 vẫn mở. Những câu lịch sử nói digest, HF hay `--binary` còn chờ Sơn là trước khi uỷ quyền và đã được thay bằng trạng thái hiện tại ở lượt 35-36.
 
 **Lượt 15 đóng hai khoảng trống còn lại của Phase 2** — xem [ADR 0007](docs/adr/0007-response-boundary-va-lop-answerability.md):
 
@@ -230,6 +242,11 @@ Ghi chú vòng 18: Social SDK `UserAudioReceivedCallback` là voice call trong S
 
 **Đã chuyển sang [docs/plan.md](docs/plan.md).**
 
+**Quyết định vận hành hiện tại:** giữ lựa chọn A, không chạy model và không đặt
+ngưỡng RAM bằng suy đoán. Ba PID pytest được báo ở lượt 41 không tồn tại khi kiểm
+trực tiếp bằng `Get-Process`; không có gì cần dừng. Tiếp tục test-only/tài liệu Cấp A;
+không mở Gate 0, không cấu hình egress hệ thống và không xuất bản thêm.
+
 Chuyển chứ không chép: danh sách lát nằm ở hai chỗ thì một chỗ sẽ lệch, và đó đúng là lỗi mà ghi chú ở đầu file này được viết ra để cảnh báo. `plan.md` sở hữu danh sách lát, acceptance criteria từng lát, và các cạnh phụ thuộc giữa lát với cổng bằng chứng.
 
 Lý do thật của việc chuyển: acceptance criteria trước đây nằm rải trong mục 7, nên tới lượt thứ ba thì criteria của S1.1 đã cách lát nó quản ba lượt và không ai tìm được.
@@ -307,6 +324,775 @@ sát được**, vì không code nào gọi hàm đó và không sink nào tồn
 
 ## 7. Nhật ký lượt làm việc
 
+### 2026-10-11 - Lượt 49 (khảo sát addressing với registry rỗng; ghim đường dây nối)
+
+**Không chạy model/GPU/audio/Discord/generator, không tải dữ liệu hay dependency,
+không đổi egress/firewall, không push.** Không tạo alias mặc định, không đổi logic
+addressing, không thêm caller runtime, **không mở Gate 0-C**. Mọi gate giữ
+**fail-closed**.
+
+- **[ĐÃ XÁC MINH] Git.** HEAD `7984e94`, `main`, **113 commit**;
+  `git status --porcelain --untracked-files=all` **exit 0, 0 dòng**; `git diff` và
+  `--cached` exit 0, rỗng; không `GIT_DIR`/`GIT_WORK_TREE`; `core.bare=false`. Lỗi
+  worktree mà Codex gặp **không tái lập** ở đây (lần thứ sáu).
+
+- **[ĐÃ ĐO] Khảo sát trước khi viết test, bằng AST chứ không grep:**
+  **`classify_address()` có 0 call site trong `src/`**, và **`AliasRegistry()` được
+  dựng 0 lần**. Ba lần `grep` khớp là **định nghĩa**, **`__all__`**, và một
+  **annotation** của tham số keyword — đúng ba hình dạng mà phép tìm theo văn bản
+  không tách được.
+
+- **[ĐÃ ĐO] Đường sống duy nhất không đi qua classifier.** `dryrun.py:610` dựng
+  `AddressContext(directly_addressed=case.directly_addressed)` **thẳng từ một field
+  fixture**. Với một dry-run tổng hợp thì đó là đúng — case đứng thay cho một phiên —
+  nhưng nó có nghĩa là **không đường nào đang chạy hỏi classifier**.
+
+- **Hai kết luận TÁCH BẠCH, vì chúng không thay thế nhau:**
+  1. **An toàn — đã được ghim kín từ trước, không nhân bản.** Thiếu alias **không**
+     tự tạo quyền nói: `test_default_registry_is_empty`,
+     `test_empty_registry_cannot_reach_a_direct_address`,
+     `test_no_dedicated_alias_registered_means_no_direct_address`, cả lớp
+     `TestUnclearIsTheDefault`, cộng `test_alias_error_does_not_quote_the_alias`.
+     Turn-context cũng đã phủ: cần `speaker_mapping_reliable`, và một addressee người
+     **thắng** turn-context.
+  2. **Giới hạn vận hành — không alias thì không nhận diện lời gọi bằng tên.**
+     Turn-context là **đường bằng chứng độc lập**, nhưng nó đòi speaker mapping tin
+     cậy, mà **Gate 0-C vẫn mở**. Nên hôm nay **không** đường nào nhận ra một lời gọi
+     đích danh, và đó là **giới hạn**, không phải lỗi.
+
+- **Thứ DUY NHẤT chưa được ghim là đường dây nối, và nay đã ghim.**
+  `classify_address() chua co caller nao trong src/`. Ledger + **khoá hai chiều** với
+  tài liệu, cùng hình dạng với ledger media gate. Lý do cần: `ResponseRequest`
+  ghi rằng `address` *"comes from the addressing classifier, not from the model"* —
+  câu đó đúng như một phát biểu **hợp đồng** (proposal không được tự nhận là đã được
+  gọi), **không** phải phát biểu rằng classifier đã được nối. Dự án này đã có **một
+  lần** người đọc bước nhầm đúng kiểu đó với media gate.
+
+- **Không thêm test trùng.** Toàn bộ bề mặt hành vi đã có assertion; lát này chỉ thêm
+  **3 ca** về wiring, trong đó một là **control hai chiều** (thấy lời gọi thật, bỏ
+  qua prose và annotation).
+
+- **[CHỜ SƠN] Không đụng:** Consent TTL (vẫn `None`), consent mode, late-join,
+  persistence/retention, privacy wording, 16 nhãn eval, hai ngưỡng RAM, scope câu hỏi
+  họp ánh xạ sang đâu, permit media sink, `model.path`/`derived_from`, dừng ba tiến
+  trình mồ côi, chính sách ghi đè generator. **Không tự điền alias** — registry mặc
+  định vẫn rỗng cho tới khi Sơn chọn tên.
+
+### 2026-10-11 - Lượt 48 (một giá trị giữ chỗ không phải evidence)
+
+**Không chạy model/GPU/audio/Discord/generator, không tải dữ liệu hay dependency,
+không đổi egress/firewall, không push.** Mọi gate giữ **fail-closed**.
+
+- **[ĐÃ XÁC MINH] Git.** HEAD `647d5aa`, `main`, **112 commit**;
+  `git status --porcelain --untracked-files=all` **exit 0, 0 dòng**; `git diff`
+  exit 0, rỗng; không `GIT_DIR`/`GIT_WORK_TREE`; `core.bare=false`. Lỗi worktree mà
+  môi trường Codex gặp **không tái lập** ở đây (lần thứ năm).
+
+- **[CHỐT THEO ỦY QUYỀN CỦA SƠN QUA CODEX] 2026-10-11:** `AdapterCapabilities.
+  evidence` được mô tả là **một trích dẫn** (URL, ticket, test manifest), nên chuỗi
+  rỗng, chuỗi chỉ có khoảng trắng, và hai giá trị giữ chỗ **chính xác** `TODO` /
+  `n/a` (sau trim, không phân biệt hoa thường) **không phải evidence**.
+  *(Ghi đúng nguồn: uỷ quyền **qua Codex**.)*
+
+- **[ĐÃ ĐO TRƯỚC KHI SỬA, trên đường gọi thật] Lỗ có thật, và không lớp nào khác
+  chặn.** Dựng `PlatformAdapter` với `supports_inbound_audio=True`: `""` **đã** bị
+  chặn sẵn bởi phép kiểm truthiness, nhưng `"   "`, `"\t\n "`, `"TODO"`, `" TODO "`,
+  `"N/A"`, `"n/a"` **đều được nhận**. Chỉ thị yêu cầu chứng minh bằng đường gọi thật
+  trước khi kết luận — đã làm, và kết luận là **không** có lớp nào khác chặn.
+
+- **Sửa tối thiểu, tại chính nơi validation đang có.** `not capabilities.evidence`
+  thành `not _is_substantive(...)`; thêm `PLACEHOLDER_EVIDENCE` **đúng hai phần tử**,
+  khớp **chính xác** sau `strip()` + `casefold()`.
+
+- **Cố ý KHÔNG mở rộng, và có test ghim ranh giới.** `"na"`, `"none-yet"`,
+  `"TODO-1234"`, `"ticket n/a-7"` **vẫn được nhận**: substring/fuzzy sẽ bắt chúng và
+  bắt đầu **từ chối nhầm** các trích dẫn thật chỉ vì chứa mấy chữ cái đó — đổi một lỗ
+  chưa ai chạm lấy những lần từ chối sai không ai yêu cầu.
+
+- **Thông báo lỗi không echo nội dung**, và có test cho **mọi** giá trị bị từ chối
+  chứ không chỉ một canary cắm vào — vì các giá trị bị từ chối đều là chuỗi giữ chỗ
+  **ngắn**, nên không thể giấu canary trong một cái mà vẫn bị từ chối.
+
+- **[ĐÃ ĐO] 6 mutation đều ĐỎ:** quay lại phép kiểm truthiness cũ · bỏ tập giữ chỗ ·
+  thôi trim · mở rộng thành substring (**đúng thứ quyết định loại trừ**) · thông báo
+  bắt đầu trích giá trị bị từ chối · xoá hẳn phép kiểm. `base.py` khôi phục **khớp
+  md5**.
+
+- **Phạm vi không đổi:** adapter **không** khai inbound audio/speaker mapping **không
+  bị ảnh hưởng** (có test); một trích dẫn thật vẫn được nhận; `leave()` no-op và
+  matcher allowlist của lượt 47 **giữ nguyên**, không biến giới hạn đã ghi thành
+  tính năng mới.
+
+- **[CHỜ SƠN] Consent TTL — không đụng.** Mặc định vẫn `None`. TTL là **chính sách
+  quyền riêng tư và thời hạn đồng ý**: không con số nào suy ra được từ code, và đặt
+  một giá trị "hợp lý" chính là thứ `AGENTS.md` cấm. Không đổi consent, late-join,
+  persistence/retention hay media gate.
+
+### 2026-10-11 - Lượt 47 (leave() theo đúng hợp đồng; chính sách matcher được ghim)
+
+**Không chạy model/GPU/audio/generator/Discord, không tải dữ liệu hay dependency,
+không đổi firewall/egress, không push.** Mọi gate giữ **fail-closed**.
+
+- **[ĐÃ XÁC MINH] Git.** HEAD `256b0a3`, `main`, **110 commit**;
+  `git status --porcelain --untracked-files=all` **exit 0, 0 dòng**; `git diff` và
+  `--cached` exit 0, rỗng; không `GIT_DIR`/`GIT_WORK_TREE`; `core.bare=false`.
+
+#### Lát 1 — `BlockedDiscordAdapter.leave()`
+
+- **[CHỐT THEO ỦY QUYỀN CỦA SƠN QUA CODEX] 2026-10-11:** `leave()` phải **an toàn
+  khi chưa join**, đúng hợp đồng `ControlPlane.leave` (*"Must be safe to call when
+  not joined"*). Đổi thành **no-op idempotent**. *(Ghi đúng nguồn: uỷ quyền **qua
+  Codex**, không gán thành một phát ngôn trực tiếp khác của Sơn.)*
+
+- **Vì sao an toàn, nói bằng cơ chế:** adapter này **không bao giờ join được** —
+  `join()` vẫn raise — nên **không bao giờ có phiên nào để `leave` kết thúc**. Câu
+  *"bạn không ở trong channel"* đã đúng sẵn, mà đó chính là thứ một động từ **dọn
+  dẹp** được yêu cầu bảo đảm. **Không mở năng lực Discord nào.**
+
+- **Test viết trước, 4 ca đỏ trước khi sửa nguồn.** Giữ assertion raise cho `join`
+  và `participant_events` (đổi tên ca cho đúng: *"mọi operation **phải chạm tới
+  Discord**"*), tách `leave` ra ba ca riêng: không raise · gọi 3 lần không raise ·
+  **không đổi gì quan sát được**. Thêm một ca ghim **docstring** không còn câu
+  *"Every operation raises"* — câu đó đúng cho tới lát này, và nếu để lại thì người
+  đọc sau sẽ kết luận `leave` vẫn bị chặn rồi viết workaround cho nó.
+
+- **Không đụng:** `health()`, capabilities (vẫn **khai 0 năng lực**), `send_text`,
+  `join`, `participant_events`, gate.
+
+- **[ĐÃ ĐO] 5 mutation hiệu lực đều ĐỎ:** `leave` raise trở lại · `join` thành no-op ·
+  docstring giữ câu cũ · `leave` thôi idempotent (raise ở lần gọi thứ hai) · `leave`
+  lật `supports_control` trên capabilities **đang sống**. `fake.py` khôi phục **khớp
+  md5** sau mỗi lần.
+
+- **Hai lần mutate đầu của tôi VÔ HIỆU, và đó là lỗi của tôi chứ không phải test
+  mù.** Tôi ghi vào `_capabilities_init` và vào một `_detail` tưởng tượng; cả hai
+  **không được đọc sau khởi tạo** — `capabilities` được chốt ở `__post_init__`
+  (`self._capabilities`), còn `health()` trả **hằng**. Một mutation không đổi thứ gì
+  quan sát được thì không chứng minh được gì; phải tìm đúng bề mặt quan sát rồi mới
+  kết luận.
+
+#### Lát 2 — chính sách matcher tên platform
+
+- **[CHỐT THEO ỦY QUYỀN CỦA SƠN QUA CODEX] 2026-10-11: KHÔNG mở rộng matcher.** Giữ
+  so khớp **chính xác** sau `strip().lower()` với allowlist hiện có. **Không sửa
+  implementation** — hành vi hiện tại đã đúng với quyết định; lát này là **test +
+  tài liệu**.
+
+- **Lý do ghi lại:** chưa có phép đo nào chứng minh cần mở rộng, và prefix/suffix/
+  substring/fuzzy sẽ bắt đầu **từ chối nhầm** tên synthetic hợp lệ — đổi một lỗ chưa
+  ai chạm lấy những lần từ chối sai không ai yêu cầu.
+
+- **Giới hạn được GHI, không che**, đúng luật `AGENTS.md`: *"một lỗ đã biết nằm trong
+  suite tốt hơn một lỗ phát hiện trong pilot"*. Ledger ghi **4** tên hiện vẫn lọt:
+  `discord-real`, `Discord Bot`, `zoom.us`, `my-teams`. **Đây KHÔNG phải danh sách
+  tên an toàn** — một adapter synthetic tự gọi là `discord-real` vẫn gây hiểu nhầm
+  cho người đọc.
+
+- **Thứ làm cho lỗ đó CHỊU ĐƯỢC, được khẳng định riêng chứ không giả định:** cái tên
+  **không phải** control — `synthetic=True` mới là, và nó **sống sót qua mọi tên**,
+  nên một consumer quyết định "kết quả này có tính là bằng chứng integration thật
+  không" vẫn có một field mà cái tên không chạm tới được. Nếu điều đó thôi đúng, lỗ
+  này thôi chịu được.
+
+- **[ĐÃ ĐO] 3 mutation đều ĐỎ:** mở rộng matcher thành substring (**đúng thứ quyết
+  định nói KHÔNG làm**) · xoá hẳn phép kiểm tên dành riêng · thôi báo cáo
+  `synthetic`. `base.py` khôi phục **khớp md5**. Ca *"tên dành riêng vẫn bị từ chối"*
+  đứng cạnh ledger chính là thứ ngăn **"không mở rộng"** trượt thành **"không làm
+  gì"**.
+
+#### Các mục vẫn chờ Sơn
+
+Không mục nào bị hai lát này chạm: `model.path`/`derived_from` · consent mode ·
+late-join · persistence/retention · privacy wording · 16 nhãn eval · hai ngưỡng RAM ·
+scope câu hỏi họp ánh xạ sang đâu · ba quyết định permit của media sink · dừng ba
+tiến trình pytest mồ côi · chính sách ghi đè của generator.
+
+### 2026-10-11 - Lượt 46 (hai mục chờ hoá ra không phải quyết định; ghim bằng test)
+
+**Không chạy model/GPU/audio/Discord, không chạy generator, không tải dữ liệu hay
+dependency, không đổi firewall/egress, không push.** Giữ mọi gate fail-closed.
+
+- **[ĐÃ XÁC MINH] Git.** HEAD `895bdde`, `main`, **109 commit**;
+  `git status --porcelain --untracked-files=all` **exit 0, 0 dòng**; `git diff` và
+  `--cached` exit 0, rỗng; không `GIT_DIR`/`GIT_WORK_TREE`; `core.bare=false`.
+
+- **[CHỐT THEO ỦY QUYỀN CỦA SƠN QUA CODEX] 2026-10-11 — hai mục chờ từ lượt 45 đã
+  được quyết:** giữ `make_vietmed_manifest --out` và `make_noise_group --out-root`
+  **là đường dẫn tự do**. Lý do: đây là nơi người chạy dàn **dữ liệu đầu vào được
+  sinh**, không phải artifact kết quả thuộc hợp đồng S2.1; ép vào `var/` đổi workflow
+  mà **không tạo thêm bằng chứng** về chất lượng hay nguồn gốc. **Không sửa code** —
+  hành vi hiện tại đã đúng với quyết định. *(Nhãn ghi đúng nguồn: uỷ quyền **qua
+  Codex**, không gán thành phát ngôn trực tiếp khác của Sơn.)*
+
+- **[ĐÃ ĐO] Hai mục trong danh sách chờ KHÔNG phải quyết định sản phẩm.**
+  1. *Sensitivity theo field hay theo card* — dựa trên một lần **đọc nhầm**. Hồ sơ
+     bàn giao **dòng 136** liệt kê `sensitivity` **trong danh sách field tối thiểu
+     của một knowledge card**, tức **card-level**, **đúng y như code**. Thứ đọc thành
+     field-level là `visibility` của **Profile** ở **dòng 128** — một **thực thể
+     khác**.
+  2. *Chỗ đặt phép kiểm scope* — `docs/spec.md` **đã ghi đúng từ trước**; thứ thiếu
+     là **bằng chứng**, không phải câu trả lời.
+
+- **[ĐÃ ĐO] Ba phép đo cho mục 2, mỗi phép hỏi đúng thứ cần hỏi:** `assess()` không
+  có tham số `scope` — hỏi **chữ ký thật** bằng `inspect.signature`, không đọc text;
+  **sáu** lần `scope` xuất hiện trong `answerability.py` **đều là prose**, không lần
+  nào là code — hỏi **AST** qua `code_tokens`; và phép so `card.scope == scope` nằm
+  **trong `KnowledgeStore.retrieve`**.
+
+- **[ĐÃ ĐO] Một lỗ trong chính test của tôi, mutation tìm ra chứ không phải đọc
+  lại.** Bản đầu khẳng định ở mức **module** và **LỌT** mutation xoá đúng bộ lọc
+  trong `retrieve`: `knowledge.py` so `scope` ở **bốn** chỗ trên **ba** hàm
+  (`retrieve`, `conflicts` ×2, `purge_scope`), nên xoá một cái vẫn còn ba và phép đếm
+  cấp module vẫn khác 0. Thu hẹp xuống mức **hàm** thì bắt được. **4 mutation cuối
+  cùng đều đỏ**; `answerability.py` và `knowledge.py` khôi phục **khớp md5**.
+
+- **Phần vẫn chờ Sơn, tách bạch và không bị lát này chạm:** *một câu hỏi trong họp
+  map sang scope nào* là quyết định sản phẩm — spec vốn đã nói thế, và trạng thái
+  `[CHỜ BẰNG CHỨNG]` của hàng đó **giữ nguyên**, chỉ cột bằng chứng được cập nhật.
+
+- **Không đụng:** `model.path`/`derived_from`, consent mode, late-join,
+  persistence/retention, privacy wording, 16 nhãn eval, hai ngưỡng RAM, ba tiến trình
+  pytest mồ côi, hành vi ghi đè của generator.
+
+#### Lát tiếp theo
+
+Cấp A không đổi trạng thái. Cấp B vẫn bị chặn bởi bốn điều kiện riêng biệt.
+
+### 2026-10-11 - Lượt 45 (đính chính một con số; khảo sát nhóm D)
+
+**Không chạy model/GPU/Discord/audio, không chạy generator, không tải dữ liệu,
+không push, không thêm dependency.** Không đụng artifact benchmark, consent, gate,
+ngưỡng RAM, egress hay nội dung meeting.
+
+- **[ĐÃ XÁC MINH] Git trong phiên này bình thường.** HEAD `7998e98`, `main`,
+  **107 commit**; `git status --porcelain --untracked-files=all` **exit 0, 0 dòng**;
+  `git diff` và `--cached` exit 0, rỗng; không `GIT_DIR`/`GIT_WORK_TREE`;
+  `is-inside-work-tree=true`; `core.bare=false`. Lỗi
+  `fatal: this operation must be run in a work tree` ở phép kiểm ngoài **vẫn không
+  tái lập** — lần thứ tư ghi nhận, kết luận không đổi.
+
+- **[ĐÃ SỬA] Nhật ký lượt 44 ghi "6 test mới"; đúng là 5.** Đếm **ba cách độc
+  lập**, cả ba khớp: `git show 7998e98 -- tests/test_bench_harness.py | grep -c
+  "^+    def test_"` → **5**; đếm `ast.FunctionDef` bắt đầu bằng `test_` trước và sau
+  commit → **50 → 55**, delta **5**; tổng suite lượt 43 → lượt 44 → **5183 → 5188**,
+  delta **5**. Báo cáo lượt 44 nói đúng (5), chỉ `PROJECT_STATE` ghi sai.
+
+- **[ĐÃ KIỂM, KHÔNG SỬA] Một khẳng định cùng dạng ở lượt 34 là ĐÚNG.**
+  "**6 test mới** (46 trong file)" cho `test_winmem.py`: commit `8d3e1e2` thật sự
+  thêm **6** phương thức. Kiểm trước khi sửa, nên không sửa nhầm một con số đúng.
+
+- **Một phân biệt đáng giữ, vì dự án này đã vấp lẫn đơn vị nhiều lần:**
+  `tests/test_bench_harness.py` có **55 phương thức test** nhưng pytest thu
+  **58 ca** — chênh là do **parametrise**. "Số phương thức" và "số ca thu được" là
+  **hai đơn vị khác nhau**; trích con số nào thì phải nói rõ con số đó là gì.
+
+- **[ĐÃ ĐO] Khảo sát nhóm D theo từng sink** — bảng đầy đủ ở `docs/plan.md`. Kết luận
+  phân loại: **cả ba generator sinh DỮ LIỆU ĐẦU VÀO** (manifest + clip audio tổng
+  hợp), **không** sinh kết quả benchmark. Nên hợp đồng artifact-kết-quả **không** tự
+  động áp lên chúng, và tôi **không** áp luật chung.
+
+- **[ĐÃ SỬA] Một tai nạn, không phải một luật mới.** `make_nonspeech_clips.CLIP_ROOT`
+  và `.MANIFEST` là **hằng literal cố định đã trỏ sẵn vào `var/asr/`**, trong khi
+  sibling `make_noise_group` **đã** đi qua `artifact_path` từ lượt 35. Lý do bị bỏ
+  sót: phép kiểm cũ hỏi **tên biến** có chứa `out`/`target`/`dest` — hai cái này
+  không chứa. **Tái lập bằng test trước khi sửa** (test đỏ, nêu đúng hai tên), rồi
+  sửa. **Vị trí không đổi một ký tự**, đã xác minh: `var/asr/clips` và
+  `var/asr/manifest-nonspeech.json`.
+
+- **Phép kiểm nay hỏi CÁCH DÙNG thay vì TÊN**, và đó mới là bản sửa đúng. Một path bị
+  gọi phương thức ghi lên là **output**; `WHISPER`, `LLAMA`, `BUILD_DIR` **chưa bao
+  giờ bị ghi** nên là **input** — ép một input qua helper-output sẽ **sai**, không
+  phải chặt hơn. **Test cho cả hai chiều**, vì nếu thiếu chiều thứ hai thì "mở rộng
+  cho bắt hết" sẽ kéo luôn ba hằng input vào mà suite không phản đối. **2 mutation,
+  cả hai đỏ**; hai file khôi phục **khớp md5**.
+
+- **[CHỜ SƠN] Hai mục cần quyết định vị trí/workflow, tôi KHÔNG tự chọn:**
+  `make_vietmed_manifest --out` và `make_noise_group --out-root` đều là **đường dẫn
+  tự do do người chạy chọn**, và cái thứ hai là nơi **audio** đi ra. Ràng buộc chúng
+  sẽ đổi thói quen vận hành, và sẽ thành ràng buộc **một nửa** vì các input
+  (`--clip-root`, `--transcript`, `--source-manifest`) vẫn tự do. Hai lựa chọn và hệ
+  quả ghi ở `docs/plan.md`.
+
+- **Ghi nhận, không phải quyết định:** bốn generator **ghi đè theo tên cố định** khi
+  chạy lại, không versioning. Rủi ro mất dữ liệu đã sinh, không phải lỗ an toàn.
+
+- **Không chạy generator nào** — chúng tạo audio thật và một cái cần dataset tải về.
+
+- **Nghĩa vụ spec: không mục nào đổi trạng thái.** `docs/spec.md` không có nghĩa vụ
+  nào về nơi dữ liệu đầu vào được sinh ra; ghi ra đây thay vì nhét vào một hàng cho
+  có.
+
+
+### 2026-10-11 - Lượt 44 (nhóm C: file tạm bám gốc work-dir, ghim bằng test)
+
+**Không chạy/tải model, không GPU, không audio, không Discord, không tải dữ liệu,
+không push, không thêm dependency.** Không đụng gate, quyết định S2.1, ngưỡng RAM,
+artifact benchmark, consent hay nội dung meeting.
+
+- **[ĐÃ XÁC MINH] Git trong phiên này bình thường.** HEAD `c69a521`, `main`,
+  **106 commit**; `git status --porcelain --untracked-files=all` **exit 0, 0 dòng**;
+  `git diff` và `--cached` đều exit 0; không `GIT_DIR`/`GIT_WORK_TREE`;
+  `is-inside-work-tree=true`; `core.bare=false`. Lỗi
+  `fatal: this operation must be run in a work tree` mà phép kiểm ngoài gặp **vẫn
+  không tái lập** ở đây — lần thứ ba ghi nhận; kết luận không đổi: **repo trên đĩa
+  không lỗi**, bất thường thuộc môi trường phiên kia.
+
+- **[ĐÃ ĐO] `--work-dir` là đường dẫn TỰ DO theo thiết kế** —
+  `work_dir = pathlib.Path(args.work_dir)`, không ràng buộc, mặc định
+  `var/probe/llm-policy`. Nên **không** ép nó vào `var/`, **không** biến nó thành
+  vị trí output. Đúng chỉ thị: nếu bất biến đòi đổi hành vi sản phẩm thì dừng ở
+  nghiên cứu + test.
+
+- **Bất biến lập được mà không đổi hành vi là QUAN HỆ, không phải vị trí:** dù
+  work-dir ở đâu, file tạm phải nằm **bên trong** nó. **Ba** đường ghi tạm (408, 591,
+  712) đều bám gốc `work_dir`, xác minh bằng AST **có theo vết một bậc gán** — hai
+  trong ba đi qua biến cục bộ (`prompt_file`, `system_file`), nên hỏi thẳng receiver
+  sẽ trả lời sai. *(Chính chỗ này test đầu của tôi sai và fail trên source đúng; sửa
+  checker, không nới assertion.)*
+
+- **[ĐÃ ĐO] Vector thoát có thật, hôm nay chưa bị chạm.** Hai trong ba tên file nội
+  suy `case.case_id`, và `Path("var/probe") / "C:/elsewhere/x.txt"` cho ra
+  **`C:/elsewhere/x.txt`** — thành phần tuyệt đối **thay thế** gốc, không mở rộng nó;
+  `../../escape.txt` thoát bằng traversal. **43/43 case id hiện là tên thuần**
+  `[A-Za-z0-9._-]+`. Test ghim rằng id là **tên**, không phải đường dẫn — canh một
+  đầu vào đang an toàn, không phải vá lỗi.
+
+- **[ĐÃ ĐO] 5 test mới, 4 mutation đều ĐỎ:** *(con số này ghi **6** cho tới lượt 45; đếm lại ba cách độc lập đều ra **5** — xem nhật ký lượt 45.)* một ghi tạm bám gốc ngoài work-dir ·
+  xuất hiện file tạm **thứ tư** · sink artifact thôi đến từ `artifact_path()` · một
+  case id mọc thêm `../`. `bench_llm_policy.py` và `llm_policy_vi.py` khôi phục
+  **khớp md5**, **không file rác** (payload đặt trong hàm không bao giờ gọi).
+
+- **Không gộp nhóm, và có test giữ ranh giới.** Một test khẳng định sink artifact
+  (`out`) **vẫn thuộc lớp A** và vẫn đến từ `artifact_path()`: nếu nó trôi sang gốc
+  `work_dir`, hợp đồng fixed-root sẽ âm thầm thôi áp dụng, mà test canh hợp đồng đó
+  nằm ở **file khác** nên không thấy. Một test khác đếm **đúng ba** file tạm, nên
+  thêm cái thứ tư buộc người thêm phải phân loại nó.
+
+- **Không đụng `model.path` / `derived_from`** — quyết định riêng của Sơn, vì sửa là
+  đổi nội dung artifact và kéo theo câu hỏi đo lại S2.3.
+
+- **Nghĩa vụ spec: không mục nào đổi trạng thái.** Nhóm C là vệ sinh nội bộ của
+  harness, không phải một nghĩa vụ trong `docs/spec.md`.
+
+#### Lát tiếp theo
+
+Cấp A không đổi trạng thái. Cấp B vẫn bị chặn bởi bốn điều kiện riêng biệt.
+
+### 2026-10-11 - Lượt 43 (phân loại đường ghi trong benchmarks; đóng một chỗ không nhất quán)
+
+**Không chạy/tải model, không GPU, không audio, không listener, không Discord, không
+media sink, không đổi consent/retention/firewall/egress, không push, không thêm
+dependency.**
+
+- **[ĐÃ XÁC MINH] Trạng thái đầu lượt.** HEAD `3728b98`, `main`, **105 commit**,
+  `git status --porcelain --untracked-files=all` **exit 0, 0 dòng**, không remote.
+  Commit `3728b98` là của Codex, **không phải** báo cáo của tôi — đã đọc và đánh giá
+  thay vì làm lại.
+
+- **Đính chính báo cáo lượt 41 của tôi, một phần.** Tôi ghi cây pytest mồ côi "vẫn
+  sống"; phép kiểm của Sơn **không thấy** PID 10588/2892/24796. Đo lại trong phiên
+  này: chúng **vẫn thấy được**, session 1, chủ sở hữu trùng, khởi động
+  2026-10-10 18:25:53, và CPU **y hệt** lượt trước (0.05 / 0.00 / 43.94 s) — tức vẫn
+  đóng băng. Nên khác biệt là **phạm vi nhìn thấy tiến trình giữa hai môi trường**,
+  không phải một con số sai. Tôi vẫn **không dừng** chúng.
+
+- **[ĐÃ ĐỌC] Đánh giá `3728b98`: đúng và là cải tiến thật.** Nó nâng
+  `test_every_artifact_writer_goes_through_the_helper` từ phép kiểm **có-nhắc-tên**
+  (import `artifact_path` rồi ghi vào `Path` khác vẫn qua được) lên **truy vết
+  dataflow** tới sink `write_text(json.dumps(...))`, và **tự giới hạn phạm vi** đúng
+  chỗ: nói rõ prompt tạm và dữ liệu generator là **lớp ghi khác**, không nằm trong
+  bất biến artifact-kết-quả. **Không làm lại.**
+
+- **[ĐÃ ĐO] Khảo sát AST toàn bộ `benchmarks/`: 28 lời gọi ghi / 11 file**, phân
+  thành **5 nhóm** theo mục đích và dữ liệu — bảng đầy đủ ở `docs/plan.md`. Cố ý
+  **không** áp luật chung: một file lock bị xoá là **đúng**, một artifact kết quả bị
+  xoá là **mất bằng chứng**.
+
+- **[ĐÃ SỬA] Một chỗ không nhất quán trong nhóm A.** `rescore_llm_policy.py` ghi
+  **cùng loại artifact**, từ **cùng cờ `--out`**, như `bench_llm_policy.py` — nhưng
+  sibling đi qua `artifact_path()` còn nó thì không. **Tái lập bằng control trước:**
+  thêm nó vào `ARTIFACT_WRITERS` → `expected one helper-rooted JSON sink, got
+  [False]`. Sửa xong → xanh. **Vị trí mặc định KHÔNG đổi**, đã xác minh:
+  `bench/llm-policy-s23-rescored.json` dưới root ra đúng
+  `var/bench/llm-policy-s23-rescored.json`; `C:/elsewhere/x.json` →
+  `artifact-path-has-drive`, `../escape.json` → `artifact-path-escapes-root`.
+
+- **[CHỜ SƠN] Phát hiện chưa từng được ghi: đường dẫn người chạy truyền nằm trong
+  NỘI DUNG artifact.** `bench_llm_policy.py:768` → `"model": {"path": str(model)}`;
+  `rescore_llm_policy.py:66` → `"derived_from": str(source)`. Lượt 26 sửa **thông báo
+  từ chối**, và ranh giới lát đó nói rõ *"giữ nguyên nội dung artifact của benchmark
+  thành công"*. Phần dư đã ghi trước đây chỉ liệt kê các dòng **in ra stdout** —
+  **hai chỗ nhúng vào JSON này chưa từng được liệt kê**. Hai lựa chọn và hệ quả ghi ở
+  `docs/plan.md`; **tôi không tự chọn**, vì sửa là **đổi nội dung artifact** và kéo
+  theo câu hỏi có đo lại S2.3 hay không.
+
+- **[GHI NHẬN, không sửa] `postprocess_asr.py` ghi cạnh file input** (`--results`),
+  nên nếu input ở ngoài `var/` thì output cũng ở ngoài. Giảm nhẹ đã có:
+  `.gitignore:127` phủ `*derived.json` ở **mọi** vị trí. Sửa đồng nghĩa phát minh một
+  vị trí output mới — đổi thói quen vận hành, không phải việc tự quyết.
+
+- **Guard AST vẫn KHÔNG phải sandbox.** Nó là phép kiểm tĩnh trên các API đã liệt kê;
+  không thấy `importlib`, `getattr`, `eval`, C-extension, hay handle truyền sang hàm
+  khác.
+
+- **Không đụng:** `src/`, consent, authority gate, persistence, retention, 16 nhãn
+  eval, năm quyết định S2.1, hai ngưỡng RAM, digest ledger,
+  `EGRESS_ISOLATION_ATTESTED`, trạng thái Gate 0.
+
+#### Lát tiếp theo
+
+Cấp A không đổi trạng thái. Cấp B vẫn bị chặn bởi bốn điều kiện riêng biệt.
+
+### 2026-10-11 - Lượt 42 (ghim nguồn gốc đường dẫn artifact JSON)
+
+**Không chạy model/GPU/audio, không listener/Discord/media sink, không đổi
+firewall/egress, không push, không thêm dependency.** `src/` không đổi.
+
+- **[ĐÃ XÁC MINH] Repo:** đầu lượt HEAD `6bc2b7c`, `main`, 104 commit, tree sạch;
+  khớp báo cáo lượt 41. Remote không dùng và không push.
+- **[ĐÍNH CHÍNH] Tiến trình:** báo cáo lượt 41 nói cây pytest mồ côi còn sống. CIM
+  bị từ chối quyền; phép kiểm `Get-Process` theo cả ba PID `10588/2892/24796` trả
+  “không tìm thấy process”, và danh sách `python/pytest/uv` không có kết quả. Không
+  có process nào bị dừng; bằng chứng hiện tại không ủng hộ claim “vẫn sống”.
+- **Phát hiện:** `test_every_artifact_writer_goes_through_the_helper` chỉ tìm token
+  `artifact_path` trong file. Import helper nhưng ghi JSON vào `Path` khác vẫn qua.
+  Probe điều khiển tái lập false-pass này.
+- **Phạm vi:** không áp một luật ghi chung cho mọi file `benchmarks/`: nơi đó còn có
+  prompt tạm, clip/manifest generator và GPU lock với policy khác. Lát chỉ ghim
+  JSON kết quả cuối của đúng 5 harness model trong quyết định S2.1 #2.
+- **Thay đổi:** test AST theo dõi phép gán đường dẫn tuyến tính từ binding import của
+  `artifact_path()` đến đối tượng gọi `write_text(json.dumps(...))`; đòi đúng một
+  sink hợp lệ trên mỗi harness. Control thử import alias hợp lệ, import chết,
+  direct path, helper không import, gán lại biến sau khi tạo path và file text tạm.
+  Thay `artifact_path(` thành `pathlib.Path(` bị bắt ở **5/5 harness**. Đây là
+  truy nguồn AST có giới hạn, không phải phân tích luồng điều khiển tổng quát.
+- **Kiểm tra:** test mục tiêu `tests/test_benchmark_artifacts.py` **30 passed**;
+  full suite **5183 passed, 3 skipped, 1 warning**. Ruff format **145 files**, Ruff
+  lint xanh, mypy **86 source files**. `uv run` lại bị Access denied; full suite
+  chạy bằng interpreter `.venv`.
+- **Không quyết thay Sơn:** consent/late-join, persistence/retention, wording,
+  16 nhãn eval, hai ngưỡng RAM. RAM giữ fail-closed; không có model run.
+
+#### Lát tiếp theo
+
+Rà riêng các đường ghi còn lại trong `benchmarks/` theo loại dữ liệu: outputs của
+`postprocess_asr`/`rescore_llm_policy`, file tạm của policy harness, manifest/clip
+generator và GPU lock. Đo chính xác path nào nằm ngoài helper, phân loại hợp đồng
+được phép cho từng loại, rồi chỉ thêm guard tương ứng; không gom chúng vào một
+allowlist hoặc gọi hàng rào test AST là cơ chế bảo mật tuyệt đối.
+
+### 2026-10-10 - Lượt 41 (rà guard persistence: 6 dạng alias đi lọt, đã đóng)
+
+**Không chạy/tải model, không audio, không listener, không Discord, không media
+sink, không đổi firewall/egress, không push, không thêm dependency. RAM vẫn
+fail-closed.** Lát **test-only**: `src/` không đổi một byte.
+
+- **[ĐÃ XÁC MINH] Trạng thái khớp báo cáo lượt 40.** HEAD `ae1c78a`, `main`,
+  **103 commit**, `git status --porcelain --untracked-files=all` **exit 0, 0 dòng**.
+  Không `GIT_DIR`/`GIT_WORK_TREE`, `core.bare=false`. **`uv run` nay chạy lại được**
+  (lượt 40 báo Access denied) — nên lượt này dùng đúng lệnh chuẩn trong `AGENTS.md`.
+
+- **[ĐÃ ĐO] Probe tìm ra 6 dạng ghi file ĐI LỌT guard của lượt 40**, và tất cả cùng
+  **một nguyên nhân gốc**: nhánh `os`/`shutil` khớp theo **cách viết tên receiver**,
+  nên `import os as o`, `from os import remove`, `from shutil import rmtree`,
+  `from os import makedirs`, `import shutil as sh`, `o.replace(...)` đều qua được.
+  *(`from pathlib import Path; Path(...).write_text(...)` **không** lọt, vì
+  `write_text` được khớp theo `attr`, không phụ thuộc receiver — chi tiết này cho
+  thấy đúng ranh giới của lỗi.)*
+
+- **Sửa đúng nguyên nhân, không vá từng dạng:** thêm `_import_bindings()` phân giải
+  import của chính file (`import os as o` → `o`→`os`; `from os import remove as rm` →
+  `rm`→`os.remove`), và `_resolved_target()` quy mọi lời gọi về **tên đầy đủ** trước
+  khi so với một tập `MUTATING_FUNCTIONS` dựng **từ chính hai tập đã có**, nên không
+  sinh ra danh sách thứ hai để lệch nhau.
+
+- **[ĐÃ ĐO] 7 mutation trên `src/meetai/errors.py` thật, cả 7 ĐỎ**; file khôi phục
+  **khớp md5**, và **không file rác nào** còn lại. Payload đặt trong **thân một hàm
+  không bao giờ gọi** — lượt 39 từng để `open('x','w')` ở module level và nó **thực
+  thi thật**, tạo một file rỗng ở repo root.
+
+- **Hai control đã commit, hai chiều.** `test_an_import_alias_does_not_hide_a_write`
+  (7 dạng phải bắt) và `test_reading_and_unrelated_calls_stay_quiet` (7 dạng phải
+  im: đọc file, `Path.open()` mặc định, `str.replace`, `os.path.join`,
+  `dataclasses.replace`, `os.open(x, 0)`). **Control thứ hai là thứ ngăn một "bản sửa"
+  luôn trả `True` đi qua suite** — thiếu nó thì "guard mạnh hơn" và "guard vô dụng"
+  trông giống nhau.
+
+- **Giới hạn, ghi thẳng — đây KHÔNG phải sandbox.** Guard là phép kiểm **tĩnh** trên
+  các API đã liệt kê. Nó **không** bắt: `importlib`/`__import__`, `getattr(os, name)`,
+  `eval`/`exec`, ghi qua C-extension, hay một file handle truyền sang hàm khác
+  (`json.dump(obj, fh)` — chỗ chặn là `open(..., "w")` sinh ra `fh`). Nó là hàng rào
+  chống **vô tình**, không phải chống **cố ý**.
+
+- **Không đụng:** production code, consent, authority gate, persistence, retention,
+  16 nhãn eval, năm quyết định S2.1, hai ngưỡng RAM, digest ledger,
+  `EGRESS_ISOLATION_ATTESTED`, trạng thái Gate 0.
+
+#### Lát tiếp theo
+
+Cấp A không đổi trạng thái: lát này làm **bằng chứng cho C-12 chắc hơn**, không mở
+thêm năng lực nào. Cấp B vẫn bị chặn bởi bốn điều kiện riêng biệt.
+
+### 2026-10-10 - Lượt 40 (gia cố scanner file-write; full suite xanh, đã commit)
+
+- **Đối chiếu repo trước khi commit:** HEAD `726889f`, branch `main`, 102 commit.
+  Git status/remote có lúc trả lỗi worktree; cuối lượt commit đã thành công và tree
+  sạch.
+- **Quyết định có thể tự xử lý:** PID 10588/2892/24796 từ báo cáo lượt 39 đều không
+  tồn tại trong phiên hiện tại. Không có cây cũ nào cần dừng; không kết luận nguyên
+  nhân tiến trình cũ biến mất.
+- **Thay đổi đã commit:** mở rộng `TestNoPersistenceYet` để phát hiện `Path.open()`
+  với mode ghi, mode động (fail-closed), `io.open`, `os.open` với flag ghi, `os.write`,
+  thao tác xoá/đổi tên của `Path`/`os`, sao chép/di chuyển/xoá qua `shutil`, và cấm
+  import `tempfile`/`shutil`. Mutation control chạy trên AST tổng hợp, không thực thi IO.
+- **Kiểm tra:** test mục tiêu **101 passed**; sau khi được cấp quyền loopback cục bộ,
+  full suite đạt **5179 passed, 3 skipped, 1 warning**. Ruff format **145 files**,
+  lint xanh; mypy **86 files** xanh. Chạy `uv run` trả Access denied nên dùng
+  `D:\MeetAI\.venv\Scripts\python.exe` trực tiếp.
+- **Không quyết thay Sơn:** consent mode, late-join, persistence/retention, wording,
+  16 nhãn eval, ngưỡng RAM LLM/ASR và việc xuất bản. Không chạy model/GPU, không dừng
+  process ngoài phiên, không push.
+
+#### Lát tiếp theo
+
+Kiểm tra lại diff/docs, cân nhắc xử lý warning Starlette/httpx trong lát riêng vì
+thay dependency có thể đổi baseline. Sau đó commit lát 40 nếu diff cuối vẫn đúng.
+Scanner là guard cho API trực tiếp đã liệt kê, không phải sandbox chống mọi
+dynamic import/reflection.
+### 2026-10-10 - Lượt 39 (phân loại khẳng định traceability; ghim 2 invariant)
+
+**Không chạy/tải model, không GPU, không tạo bot, không gọi Discord API, không mở
+listener, không đổi firewall/egress. Không soạn privacy notice. Không gán nhãn eval.
+Không push, không đổi remote. KHÔNG dừng cây pytest mồ côi.**
+
+- **[ĐÃ XÁC MINH] Git bình thường trong phiên này.** HEAD `766dcd1`, `main`,
+  **101 commit**; `git status --porcelain --untracked-files=all` **exit 0, 0 dòng**;
+  `remote -v` và `diff` đều exit 0; không `GIT_DIR`/`GIT_WORK_TREE`;
+  `is-inside-work-tree` = true; `core.bare` = false. Triệu chứng Codex báo **vẫn
+  không tái lập** ở đây — lượt 38 đã loại trừ repo bare/gitlink/`core.bare` sai, và
+  kết luận vẫn là: **repo trên đĩa không lỗi**, bất thường thuộc môi trường phiên kia.
+
+- **[ĐÃ ĐO] Cây pytest mồ côi BỊ TREO, không phải đang chạy.** PID 10588/2892/24796
+  sống **195 phút** nhưng tổng CPU chỉ **~44 giây** (một lần chạy full suite tốn ~80 s
+  wall). Nên **"chờ nó kết thúc" là không khả thi** — nó sẽ không tự kết thúc. Lượt
+  này vì vậy **chỉ chạy test hẹp**, không chạy full suite. Việc dừng nó **chờ chủ dự
+  án quyết**.
+
+- **Phân loại 18 khẳng định TRƯỚC khi viết test** — phần việc chính, chi tiết ở
+  [checklist](docs/research/2026-10-10-checklist-privacy-consent-gate-0p.md) mục
+  *Phân loại trước khi ghim*. Kết quả: **5** đã có test (không nhân bản) · **2** đáng
+  ghim và chưa có test → đã thêm · **3** là hiện trạng có thể đổi hợp lệ, chỉ ghi tài
+  liệu · **3** là số đo, **cố ý không** ghim.
+  **Ba thứ cố ý KHÔNG ghim, và lý do:** số test 86/45/31/25/62 (số đo, không phải
+  tiêu chí sản phẩm) · `ConsentState` có 6 trạng thái (thêm trạng thái là tiến hoá
+  bình thường) · `src/` có 0 định danh huấn luyện (**hồ sơ bàn giao ghi fine-tune
+  LoRA/QLoRA là hướng mong muốn**, nên ghim nó là chủ động cản một hướng đã chốt).
+
+- **[ĐÃ ĐO] Hai invariant mới, 6 mutation đều đỏ.** `TestNoPersistenceYet` và
+  `TestTheMediaGateHasNoCallerYet` trong `tests/test_environment_invariants.py` —
+  đặt ở đó vì file đã có sẵn idiom "chưa có, và khi có phải là cố ý"
+  (`TestNoNetworkCodeYet`). Mutation bị bắt: import `sqlite3` vào `src/` · một lời gọi
+  `.write_text()` · `open(..., 'w')` · một caller của media gate · tài liệu **mất**
+  câu "chưa có caller" trong khi ledger rỗng · ledger **có** mục trong khi tài liệu
+  vẫn phủ nhận. Cả ba file bị mutate **khôi phục khớp md5**.
+
+- **Thiết kế để một thay đổi HỢP LỆ không bị đọc thành lỗi sản phẩm.** Persistence
+  *sẽ* đến khi 0-U đóng; một caller cho media gate *là mục đích* của hàm. Nên thông
+  báo lỗi **nói thẳng đây không phải defect**, và yêu cầu ba việc: ghi vào ledger,
+  thêm test **hành vi** chứng minh đường đó thật sự từ chối, cập nhật tài liệu.
+  Ledger chỉ thấy **lời gọi**, không thấy nó có chặn hay không — và nó nói ra điều đó
+  thay vì để người đọc tưởng là đã đủ.
+
+- **Không đụng:** production code, consent, authority gate, persistence, retention,
+  16 nhãn eval, năm quyết định S2.1, hai ngưỡng RAM, digest ledger,
+  `EGRESS_ISOLATION_ATTESTED`.
+
+#### Lát tiếp theo
+
+Full suite **chưa chạy ở lượt này** (lý do ở trên) — cần chạy lại sau khi chủ dự án
+quyết về cây pytest mồ côi. Cấp B vẫn bị chặn bởi bốn điều kiện riêng biệt.
+
+### 2026-10-10 - Lượt 38 (chẩn đoán Git; đối chiếu lại bảng P0; tách hai commit)
+
+**Không chạy model/GPU/benchmark, không tải model, không gọi Discord API, không tạo
+bot, không mở listener. Không đổi consent/persistence/retention/egress/firewall.
+Không push, không đổi remote. KHÔNG dừng cây tiến trình pytest** — chủ dự án chưa
+chốt, nên để nguyên.
+
+- **[ĐÃ XÁC MINH] Git trong phiên này hoàn toàn bình thường.** Triệu chứng Codex báo
+  (`git rev-parse` chạy được trong khi `git status`/`remote`/`diff` trả
+  `fatal: this operation must be run in a work tree`) **không tái lập**. Đo được:
+  `cwd` = `/d/MeetAI`; **không** có `GIT_DIR` hay `GIT_WORK_TREE` trong môi trường
+  (chỉ `GIT_EDITOR=true`); `.git` là **thư mục thật**, không phải file gitlink;
+  `rev-parse --is-inside-work-tree` = **true**; `--is-bare-repository` = **false**;
+  `--show-cdup` rỗng; `git config --local core.bare` = **false**. `git status`,
+  `git remote`, `git diff` đều **exit 0**.
+  **Đã loại trừ:** repo bare, `.git` hỏng, gitlink, `GIT_DIR` lạc, `core.bare` sai.
+  **Chưa tái lập được đúng thông báo đó** — tôi thử `GIT_DIR` với cwd trong và ngoài
+  work tree, và `-c core.bare=true`; cả ba cho kết quả **khác**, không cho ra thông
+  báo ấy. Nên kết luận đúng mức: **repo trên đĩa không lỗi**; bất thường nằm ở **môi
+  trường phiên Codex**, và tôi **không** suy ra được nguyên nhân chính xác.
+  **Phép kiểm cho lần sau, chạy ngay trong phiên gặp lỗi:**
+  `env | grep ^GIT`, `git rev-parse --is-inside-work-tree`, `git rev-parse --git-dir`,
+  `git config core.bare`, `pwd`.
+
+- **[ĐÃ XÁC MINH] 6 file đang chờ đúng như lượt 37 báo**, và **không file code nào
+  đổi**: `git status --porcelain -- src/ tests/ benchmarks/ pyproject.toml uv.lock`
+  **rỗng**; index **sạch** (`git diff --cached` rỗng).
+
+- **[ĐÃ XÁC MINH] Bảng P0-1…P0-9 đối chiếu lại với source: 18/18 khẳng định ĐÚNG.**
+  Script kiểm tái lập được, dùng **AST** chứ không grep. Gồm: `ConsentState` **6**
+  trạng thái **không member nào falsy**; `ConsentMode`/`LateJoinPolicy` **có**
+  `PENDING_DECISION` falsy; `media_processing_allowed` = `False` và
+  `require_media_processing_allowed()` raise `PendingDecisionError` ở mặc định;
+  **0 call site** cho hàm đó trong `src/` (AST); **0** module persistence và **0**
+  lời gọi ghi file trong `src/`; **0** định danh huấn luyện (trong khi grep `train`
+  vẫn khớp **3** file qua `con`**`strain`**`t` — control giữ lại trong script);
+  `policy/content/errors` **không** import framework; `ALLOWED_FIELDS` = **23**;
+  `docs_url`/`redoc_url`/`openapi_url` đều `None`; và **5/5** con số test được trích
+  trong bảng khớp số collect thật (86/45/31/25/62). **Không khẳng định nào phải sửa.**
+
+- **Đã tạo HAI commit local, tách đúng lát** (không push): **`52abf8d`** — lượt 36
+  (đọc Terms/Policy từ nguồn, DAVE, đánh dấu các khối trạng thái cũ là lịch sử);
+  **`3d287fc`** — lượt 37 (bảng traceability + ba đính chính). Ba file có nội dung
+  **trộn** hai lượt nên phải tách theo hunk; làm bằng cách sao lưu bản cuối, hoàn
+  nguyên **đúng** các sửa đổi của lượt 37 (mỗi lần hoàn nguyên đều assert anchor nên
+  no-op im lặng là không thể), commit, rồi khôi phục. **Xác minh bằng md5: cả ba file
+  khớp byte-for-byte** với bản sao lưu trước khi tách.
+
+- **[ĐÃ ĐO] Một bất thường môi trường THỨ HAI, cùng họ với lỗi `uv`.**
+  `uv run pytest -q | tail -1` trả **exit 127** kèm
+  `cygheap read copy failed ... windows pid 6760, Win32 error 299`. Đó là **`tail`
+  chết khi fork** ở tầng git-bash/cygwin (`ERROR_PARTIAL_COPY`), **không phải pytest
+  lỗi**: chạy lại ghi thẳng ra file cho **exit 0, 5168 passed**. Cùng với lỗi
+  "Access is denied" của `uv` ở lượt 37, đây là **hai dấu hiệu độc lập của sức ép
+  tài nguyên / fork không ổn định trên máy này**, không phải lỗi của repo.
+  **Hệ quả thực hành:** khi một lệnh trả mã lỗi lạ, **chạy lại ghi ra file thay vì
+  qua pipe** trước khi kết luận.
+
+- **P0-1 (privacy notice) KHÔNG soạn** — nó phụ thuộc 0-U (retention/persistence),
+  và chủ dự án chưa chốt.
+
+- **Không đụng:** hai ngưỡng RAM, digest ledger (rỗng), `EGRESS_ISOLATION_ATTESTED`
+  (`False`), 16 nhãn eval, Gate 0-S/0-P/0-C/0-U, production gate.
+
+#### Lát tiếp theo
+
+Tree **sạch** sau ba commit của lượt này. **Cấp B** vẫn bị chặn bởi bốn điều kiện
+riêng biệt. **Cấp A** còn việc không cần quyết định sản phẩm: ghim các khẳng định
+traceability thành test hồi quy (để chúng không âm thầm sai), và tiếp tục đóng khoảng
+trống kiểm thử.
+
+### 2026-10-10 - Lượt 37 (đối chiếu checklist với code; chẩn đoán uv; không commit)
+
+**Không commit, không push, không đổi remote, không xuất bản thêm.** Không chạy
+model/benchmark/GPU, không tải model, không mở Gate, không đổi consent/persistence/
+retention.
+
+**Trạng thái Git xác minh trực tiếp ở đầu lượt:** HEAD `9422333`, branch `main`,
+**98 commit**, root `D:/MeetAI`, **không cấu hình remote**. `git status --porcelain`
+**chạy được, exit 0** — và **tree KHÔNG sạch**: 5 file tracked đã sửa
+(`PROJECT_STATE.md`, `docs/plan.md`, `docs/spec.md`, `docs/runbook/thu-nghiem-cuc-bo.md`,
+`docs/research/2026-10-10-gate-0p-discord-policy.md`) cộng 1 file untracked
+(`docs/research/2026-10-10-checklist-privacy-consent-gate-0p.md`). Toàn bộ là công
+việc **chưa commit của lượt 36**; lượt này **giữ nguyên**, chỉ bổ sung.
+
+- **[ĐÃ XÁC MINH] Remote đọc được, khác với lượt 36.** Lượt 36 ghi *"chưa xác minh
+  trực tiếp trạng thái GitHub"*. Lượt này `git ls-remote` (read-only, không push)
+  trả về **đúng một ref** `refs/heads/main` = `317eb8c`, **khớp** `publication-snapshot`
+  local. Snapshot công khai vẫn đúng như lượt 35 ghi.
+
+- **[ĐÃ XÁC MINH] Test suite chạy được trên HEAD này**, trái với ghi nhận "chưa chạy
+  lại": `uv run pytest -q` → **5168 passed, 3 skipped, exit 0**, 81.82 s.
+
+- **[ĐÃ XÁC MINH] Nguyên nhân lỗi `uv` "Access is denied" — tìm ra, KHÔNG sửa.**
+  Lỗi **không tái lập** lúc này (`uv --version`, `uv run python --version`,
+  `uv run pytest` đều exit 0). Nhưng có **hai yếu tố đo được**, và yếu tố thứ nhất
+  giải thích đúng hình dạng lỗi:
+
+  1. **Một cây tiến trình `pytest -q` từ 18:25:53 VẪN CÒN SỐNG.** Đo bằng
+     `Get-CimInstance Win32_Process`: PID **2892** = `D:\MeetAI\.venv\Scripts\python.exe`
+     chạy `D:\MeetAI\.venv\Scripts\pytest.exe -q`, cha là PID 10588 (`pytest.exe`),
+     con là PID **24796**. Nó **giữ mở** `python.exe` và `pytest.exe` **bên trong
+     `.venv`**. Trên Windows, một file đang được map làm ảnh thực thi **không thể bị
+     thay thế hay xoá**, nên mọi thao tác `uv` cần **ghi lại** `.venv` (`uv sync`,
+     `uv pip install`, `uv run` sau khi lock đổi) sẽ fail **os error 5 — Access is
+     denied**. Điều này cũng giải thích vì sao `uv run pytest` **vẫn chạy được**: nó
+     chỉ **đọc và thực thi**, không ghi đè. Gần như chắc chắn là tiến trình mồ côi do
+     một phiên bị ngắt giữa chừng ở lượt trước.
+     **Cách xử lý (chủ dự án quyết, tôi KHÔNG tự chạy):**
+     `Stop-Process -Id 10588,2892,24796 -Force`. Tôi không tự kill vì đó là tác động
+     lên tiến trình ngoài phiên này.
+  2. **`UV_CACHE_DIR` KHÔNG được đặt trong shell hiện tại**, nên `uv cache dir` =
+     `C:\Users\<user>\AppData\Local\uv\cache` (**341 MB**) — trên ổ **C: chỉ còn
+     2.01 GiB**. Trong khi `benchmarks/README.md:25` tài liệu hoá
+     `export UV_CACHE_DIR="D:/MeetAI/var/uv-cache"`, và cache đó **đã tồn tại, 2.8 GB**.
+     Nên cùng một repo **hành xử khác nhau** tuỳ shell có export biến hay không. Đây
+     là yếu tố **góp phần**, không phải nguyên nhân trực tiếp của os error 5.
+
+- **[ĐÃ XÁC MINH] Proposal còn nguyên và PDF khớp nguồn.** Cả hai file
+  **không đổi** kể từ commit `7641852` (`git status --porcelain docs/proposal/` rỗng;
+  `git diff 7641852 HEAD -- docs/proposal/` rỗng). PDF: header `%PDF-1.4`, **9 trang**,
+  trailer `%%EOF` hợp lệ, 235 065 byte. **Đã render và đã kiểm tra trực quan** ở lượt
+  35 (pandoc → HTML tự chứa → headless Chrome; QA trên **3 vùng** ở khổ A4). **Giới
+  hạn phải ghi:** QA đó thực hiện trên **HTML** ở khổ A4, **không** trên ảnh raster
+  của chính PDF, vì máy này **không có poppler** nên không rasterise được PDF; và chỉ
+  **3 vùng** được xem, không phải cả 9 trang.
+
+- **Bảng traceability đã lập** trong
+  `docs/research/2026-10-10-checklist-privacy-consent-gate-0p.md`: 9 dòng P0-1…P0-9,
+  mỗi dòng ghi *đã có trong code (kiểm chứng ở HEAD)* / *thiếu* / *bằng chứng cần có*
+  / *gate*. **Ba đính chính từ việc đối chiếu:**
+  1. **`require_media_processing_allowed()` có ZERO caller trong `src/`** — bốn kết
+     quả grep là **một định nghĩa** + **ba docstring**. Nó là nghĩa vụ hướng tới, không
+     phải control đang chạy trên một đường thật.
+  2. **`ConsentState` không có member falsy** (6 trạng thái). Tính fail-closed ở tầng
+     chính sách đến từ `ConsentMode`/`LateJoinPolicy`, hai enum **có**
+     `PENDING_DECISION` falsy. Đo: `media_processing_allowed` = `False` ở mặc định,
+     `require_media_processing_allowed()` raise `PendingDecisionError`.
+  3. **P0-6 suýt ghi sai:** grep báo "train" trong `boundary.py`/`session.py`; kiểm
+     lại bằng **AST** cho **0** định danh huấn luyện — `train` khớp trong
+     `con**strain**t`. Lần thứ sáu một phép quét chuỗi con cho kết quả sai.
+
+- **Không đụng:** hai ngưỡng RAM (vẫn pending), digest ledger (vẫn rỗng),
+  `EGRESS_ISOLATION_ATTESTED` (vẫn `False`), 16 nhãn eval, consent/late-join/
+  persistence/retention/wording, Gate 0-S/0-P/0-C/0-U, production gate.
+
+#### Lát tiếp theo
+
+Tree còn **6 file chưa commit** (5 sửa + 1 mới) — gộp công việc lượt 36 và 37. Chủ dự
+án quyết khi nào commit và gộp thành mấy lát. **Cấp B vẫn bị chặn** bởi bốn điều kiện
+riêng biệt. **Cấp A** vẫn là nơi làm việc được mà không cần quyết định sản phẩm mới.
+
+### 2026-10-10 - Lượt 36 (kiểm tra báo cáo; cập nhật nguồn Discord; giữ cấp A)
+
+- **Đối chiếu trực tiếp `D:/MeetAI`:** HEAD `9422333`, branch `main`, 98 commit;
+  local `publication-snapshot` trỏ `317eb8c`. Không có remote cấu hình trong
+  checkout. Không xác minh được trạng thái GitHub trực tiếp từ lượt này. `git
+  status --porcelain` lỗi `fatal: this operation must be run in a work tree`; các
+  phép diff thường/staged và truy vấn untracked không cho thấy thay đổi trước
+  khi sửa tài liệu. Vì vậy không ghi tree là sạch.
+- **Chọn việc tiếp theo:** giữ phương án A đã được chọn — fail-closed, không chạy
+  model. Không đặt hai ngưỡng RAM từ n=1/n=0; không attestate firewall thay Sơn.
+- **Nghiên cứu Gate 0-P/0-S:** nguồn Developer Terms, Developer Policy và Voice
+  Connections chính thức đọc được qua web lần này, dù lượt 34 gặp 403. Terms
+  yêu cầu privacy policy công khai và cơ chế yêu cầu sửa/xoá; Policy giới hạn
+  việc dùng API Data theo chức năng đã nêu và cấm huấn luyện message content lấy
+  từ API khi chưa được Discord cho phép. Voice docs mô tả UDP nhận/gửi và DAVE
+  E2EE từ 2026-03-01; vẫn chưa chứng minh route bot guild được hỗ trợ hoặc mapping
+  SSRC người nói sang user. Chi tiết, ngày truy cập và giới hạn suy luận ở
+  `docs/research/2026-10-10-gate-0p-discord-policy.md`, mục 7.
+- **Cổng giữ nguyên:** 0-S/0-P/0-C/0-U mở; S2.2/S2.3 `partial/open`. Năm quyết
+  định S2.1 vẫn là quyết định theo uỷ quyền, không chuyển nhãn thành quyết định
+  trực tiếp của Sơn.
+
+#### Lát tiếp theo
+
+Checklist 0-P đã được lập tại `docs/research/2026-10-10-checklist-privacy-consent-gate-0p.md`; tiếp tục đối chiếu yêu cầu với bằng chứng triển khai. Giữ cấp A
+và test-only. Không tạo app, gọi Discord API, join voice, tải model, chạy GPU,
+đặt firewall hay thay đổi retention/consent. Giữ tên chủ dự án ngoài mọi lần
+xuất bản mới cho tới khi có chỉ dẫn ngược lại.
+
 ### 2026-10-10 - Lượt 35 (năm quyết định S2.1 theo ủy quyền; proposal; snapshot sạch)
 
 Revision trước lát: **`8d3e1e2`**, 89 commit, branch `main`, tree sạch. **Không chạy
@@ -370,6 +1156,27 @@ model/ASR/LLM, benchmark, GPU, Discord hay phép đo có model. Không cài pack
 - **KHÔNG đụng:** hai ngưỡng RAM (vẫn `None`), lựa chọn A/B/C, model chạy có giám sát,
   artifact schema, 16 nhãn eval, consent/gate/persistence/retention, acceptance
   criteria.
+
+- **[ĐÃ ĐO] Đã push, dạng snapshot sạch.** `PCBoiz/MeetAI` xác minh **rỗng**
+  ngay trước push (`ls-remote` exit 0, **0 ref**). Branch orphan
+  `publication-snapshot`, **1 commit** `317eb8c`, **151 file**. Rà trước push
+  trên toàn bộ file: **0** username/biến thể tên · **0** email cá nhân · **0**
+  credential (8 pattern) · **0** canary mang path thật · **0** audio/transcript/
+  model/dataset/benchmark artifact. Bỏ tracking `.coverage` (artifact build; đo
+  được: 2 path `D:\`, **0** username). Sau push: `ls-remote` cho đúng **1** ref,
+  `FETCH_HEAD` **khớp** SHA local, `rev-list --count` = **1** — remote **không**
+  mang 89 commit cũ. **Hai phần dư đã ghi vào chính commit message:** PDF là
+  binary nén nên phép quét byte **yếu hơn** với nó; và **tên gọi của chủ dự án
+  xuất hiện ~602 lần** trong 37 file `.md` — **để nguyên**, vì đó là dữ liệu cá
+  nhân của chủ dự án, không phải thứ tôi quyết.
+
+- **[ĐÃ ĐO] Proposal.** `docs/proposal/meetai-de-xuat-du-an.vi.{md,pdf}`, **9
+  trang**, pandoc → HTML tự chứa → headless Chrome. CSS chỉ dùng **font cục
+  bộ**, build **không gọi mạng**. Visual QA trên 3 vùng (tiêu đề + bảng đầu, sơ
+  đồ + khối mã, bảng phần cứng rộng): dấu tiếng Việt, bố cục bảng, phân cấp tiêu
+  đề đều đúng. Quét nguồn: **0** cho tên riêng, email, path máy, canary, phần
+  trăm tiến độ, tuyên bố production-ready. Gọi chủ dự án bằng **vai trò**, không
+  bằng tên.
 
 #### Lát tiếp theo
 

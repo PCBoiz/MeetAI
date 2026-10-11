@@ -186,6 +186,15 @@ class TestThePolicyIsEnforcedAcrossEveryHarness:
     the CPU gate guarded 1 of 5 model paths when it first landed.
     """
 
+    ARTIFACT_WRITERS = (
+        "bench_asr.py",
+        "bench_coresidency.py",
+        "bench_llamacpp.py",
+        "bench_llm.py",
+        "bench_llm_policy.py",
+        "rescore_llm_policy.py",
+    )
+
     @staticmethod
     def _benchmarks() -> dict[str, str]:
         root = pathlib.Path(__file__).resolve().parent.parent / "benchmarks"
@@ -236,21 +245,157 @@ class TestThePolicyIsEnforcedAcrossEveryHarness:
         assert offenders == {}
 
     def test_every_artifact_writer_goes_through_the_helper(self) -> None:
-        """The positive direction: the five writers must name ``artifact_path``.
+        """Each model harness's final JSON sink must descend from the helper.
 
-        Without this, deleting every output assignment would also pass the
-        test above - a scan that finds nothing is a test that cannot fail.
+        A token-presence check was too weak: importing ``artifact_path`` and
+        then writing to an unrelated ``Path`` passed. Track simple local path
+        assignments inside each top-level function and inspect the actual
+        ``write_text`` sink.
+        Temporary prompts and generated inputs are different write classes;
+        they are deliberately not described by this result-artifact invariant.
         """
-        writers = (
-            "bench_asr.py",
-            "bench_coresidency.py",
-            "bench_llamacpp.py",
-            "bench_llm.py",
-            "bench_llm_policy.py",
-        )
         sources = self._benchmarks()
-        for name in writers:
-            assert "artifact_path" in code_tokens(ast.parse(sources[name])), name
+        for name in self.ARTIFACT_WRITERS:
+            sinks = self._json_artifact_sinks(sources[name])
+            assert sinks == [True], (
+                f"{name}: expected one helper-rooted JSON sink, got {sinks}"
+            )
+
+    @staticmethod
+    def _json_artifact_sinks(source: str) -> list[bool]:
+        """Return whether each JSON ``write_text`` receiver is helper-rooted."""
+        tree = ast.parse(source)
+        helper_names: set[str] = set()
+        for node in tree.body:
+            if isinstance(node, ast.ImportFrom) and node.module == "benchmarks.artifacts":
+                helper_names.update(
+                    alias.asname or alias.name
+                    for alias in node.names
+                    if alias.name == "artifact_path"
+                )
+
+        def assigned_names(targets: list[ast.expr]) -> set[str]:
+            return {
+                node.id
+                for target in targets
+                for node in ast.walk(target)
+                if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store)
+            }
+
+        def is_helper_call(expr: ast.expr) -> bool:
+            return (
+                isinstance(expr, ast.Call)
+                and isinstance(expr.func, ast.Name)
+                and expr.func.id in helper_names
+            )
+
+        def is_safe_path(expr: ast.expr, safe_names: set[str]) -> bool:
+            if is_helper_call(expr):
+                return True
+            if isinstance(expr, ast.Name):
+                return expr.id in safe_names
+            if isinstance(expr, ast.BinOp) and isinstance(expr.op, ast.Div):
+                return is_safe_path(expr.left, safe_names)
+            if isinstance(expr, ast.Attribute) and expr.attr == "parent":
+                return is_safe_path(expr.value, safe_names)
+            if (
+                isinstance(expr, ast.Call)
+                and isinstance(expr.func, ast.Attribute)
+                and expr.func.attr == "joinpath"
+            ):
+                return is_safe_path(expr.func.value, safe_names)
+            return False
+
+        def names_for_function(
+            function: ast.FunctionDef | ast.AsyncFunctionDef,
+        ) -> set[str]:
+            safe_names: set[str] = set()
+            # Follow only straight-line assignments in source order. Treating
+            # all assignments as an unordered fixed point would let a later
+            # safe reassignment bless an earlier unsafe path.
+            for statement in function.body:
+                if isinstance(statement, ast.Assign) and is_safe_path(
+                    statement.value, safe_names
+                ):
+                    safe_names.update(assigned_names(statement.targets))
+            return safe_names
+
+        functions = [
+            node
+            for node in tree.body
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        ]
+        sinks: list[bool] = []
+        for function in functions:
+            safe_names = names_for_function(function)
+
+            for candidate in ast.walk(function):
+                if not isinstance(candidate, ast.Call) or not isinstance(
+                    candidate.func, ast.Attribute
+                ):
+                    continue
+                if candidate.func.attr != "write_text" or not candidate.args:
+                    continue
+                payload = candidate.args[0]
+                if not (
+                    isinstance(payload, ast.Call)
+                    and isinstance(payload.func, ast.Attribute)
+                    and payload.func.attr == "dumps"
+                    and isinstance(payload.func.value, ast.Name)
+                    and payload.func.value.id == "json"
+                ):
+                    continue
+                sinks.append(is_safe_path(candidate.func.value, safe_names))
+        return sinks
+
+    def test_sink_control_rejects_dead_helper_import_and_accepts_alias_flow(self) -> None:
+        safe = (
+            "from benchmarks.artifacts import artifact_path as output_root\n"
+            "def main():\n"
+            "    root = output_root('bench')\n"
+            "    target = root / 'result.json'\n"
+            "    target.write_text(json.dumps({}))\n"
+        )
+        unsafe = (
+            "from benchmarks.artifacts import artifact_path\n"
+            "from pathlib import Path\n"
+            "def main():\n"
+            "    target = Path('var/bench/result.json')\n"
+            "    target.write_text(json.dumps({}))\n"
+        )
+        unbound_helper = (
+            "def main():\n"
+            "    target = artifact_path('bench') / 'result.json'\n"
+            "    target.write_text(json.dumps({}))\n"
+        )
+        reassigned_after_use = (
+            "from benchmarks.artifacts import artifact_path\n"
+            "from pathlib import Path\n"
+            "def main():\n"
+            "    root = Path('C:/outside')\n"
+            "    target = root / 'result.json'\n"
+            "    root = artifact_path('bench')\n"
+            "    target.write_text(json.dumps({}))\n"
+        )
+        temporary_text = (
+            "from pathlib import Path\n"
+            "def main():\n"
+            "    prompt = Path('var/bench/prompt.txt')\n"
+            "    prompt.write_text('synthetic prompt')\n"
+        )
+        assert self._json_artifact_sinks(safe) == [True]
+        assert self._json_artifact_sinks(unsafe) == [False]
+        assert self._json_artifact_sinks(unbound_helper) == [False]
+        assert self._json_artifact_sinks(reassigned_after_use) == [False]
+        assert self._json_artifact_sinks(temporary_text) == []
+
+    def test_replacing_each_harness_helper_with_a_direct_path_is_detected(self) -> None:
+        sources = self._benchmarks()
+        for name in self.ARTIFACT_WRITERS:
+            source = sources[name]
+            assert "artifact_path(" in source, name
+            mutated = source.replace("artifact_path(", "pathlib.Path(", 1)
+            assert self._json_artifact_sinks(mutated) == [False], name
 
     def test_the_scan_would_catch_a_hand_built_path(self) -> None:
         """Control: the scan above passes for free if it matches nothing."""
@@ -279,3 +424,94 @@ class TestThePolicyIsEnforcedAcrossEveryHarness:
                         pytest.fail(
                             f"{name}: a literal digest value at line {key.lineno}"
                         )
+
+    #: Literal-rooted names that are read, never written. A staged binary is
+    #: an input, and routing an input through the output helper would be
+    #: wrong, not stricter.
+    WRITING_METHODS = ("mkdir", "write_text", "write_bytes", "touch")
+
+    @classmethod
+    def _literal_paths(cls, source: str) -> dict[str, str]:
+        """Names assigned from ``pathlib.Path(<string literal>)``."""
+        literals: dict[str, str] = {}
+        for node in ast.walk(ast.parse(source)):
+            if not isinstance(node, ast.Assign):
+                continue
+            value = node.value
+            if (
+                isinstance(value, ast.Call)
+                and isinstance(value.func, ast.Attribute)
+                and value.func.attr == "Path"
+                and value.args
+                and isinstance(value.args[0], ast.Constant)
+                and isinstance(value.args[0].value, str)
+            ):
+                for target in node.targets:
+                    if isinstance(target, ast.Name):
+                        literals[target.id] = value.args[0].value
+        return literals
+
+    @classmethod
+    def _written_names(cls, source: str) -> set[str]:
+        """Names a writing method is called on."""
+        return {
+            node.func.value.id
+            for node in ast.walk(ast.parse(source))
+            if isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr in cls.WRITING_METHODS
+            and isinstance(node.func.value, ast.Name)
+        }
+
+    def test_no_output_path_is_built_from_a_literal(self) -> None:
+        """Outputs go through the helper; inputs are left alone.
+
+        The earlier version of this check asked whether the *variable name*
+        contained "out", "target" or "dest". That heuristic missed
+        ``CLIP_ROOT`` and ``MANIFEST`` purely because of what they are called,
+        which is how two literal output paths sat beside a sibling generator
+        that already used the helper.
+
+        Asking what the code *does* with the name separates them properly: a
+        path a writing method is called on is an output, and the staged binary
+        constants - ``WHISPER``, ``LLAMA``, ``BUILD_DIR`` - are inputs that
+        must **not** be routed through an output helper, because that would be
+        wrong rather than stricter.
+        """
+        offenders: dict[str, list[str]] = {}
+        for name, source in self._benchmarks().items():
+            if name == "artifacts.py":
+                continue  # defines the root; it is the helper, not a caller
+            literals = self._literal_paths(source)
+            written = self._written_names(source)
+            found = [
+                f"{variable} = Path({literals[variable]!r})"
+                for variable in sorted(literals)
+                if variable in written
+            ]
+            if found:
+                offenders[name] = found
+        assert offenders == {}, (
+            f"an output path is built from a literal instead of artifact_path(): "
+            f"{offenders}. S2.1 decision #2 fixes the artifact root; a sibling "
+            "generator already routes its manifest through the helper."
+        )
+
+    def test_input_constants_are_deliberately_left_alone(self) -> None:
+        """The other direction, so the check cannot be 'flag every literal'.
+
+        Without this, widening the rule until nothing is missed would also
+        drag the staged binary paths in, and the suite would not object.
+        """
+        inputs = {"WHISPER", "LLAMA", "BUILD_DIR"}
+        seen: set[str] = set()
+        for name, source in self._benchmarks().items():
+            literals = self._literal_paths(source)
+            written = self._written_names(source)
+            for variable in literals:
+                if variable in inputs:
+                    seen.add(variable)
+                    assert variable not in written, (
+                        f"{name}: {variable} is a staged input and must not be written to"
+                    )
+        assert seen == inputs, f"expected the input constants to exist, saw {seen}"

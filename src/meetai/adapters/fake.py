@@ -166,11 +166,18 @@ class BlockedDiscordAdapter(PlatformAdapter, ControlPlane, OutboundText):
     visible in the code: when the evidence arrives, inbound audio is added here
     with its citation, and the base class will require that citation.
 
-    Every operation raises. ``health()`` is the one exception and
-    deliberately so: a health check that raised would be indistinguishable
-    from a crash, and the supervisor needs to be able to ask "can you work?"
-    and get "no, and here is why" rather than an exception. It returns
-    ``connected=False`` citing the open gate.
+    Every operation that would have to reach Discord raises. Two deliberate
+    exceptions, for different reasons.
+
+    ``health()`` must not raise: a health check that raised would be
+    indistinguishable from a crash, and the supervisor needs to ask "can you
+    work?" and get "no, and here is why". It returns ``connected=False``
+    citing the open gate.
+
+    ``leave()`` is a no-op, because ``ControlPlane.leave`` is documented as
+    "must be safe to call when not joined" and raising broke that contract for
+    any caller unwinding after a failure. It is safe here precisely because
+    ``join`` still raises, so there is never anything to leave.
     """
 
     _capabilities_init: AdapterCapabilities = field(
@@ -222,7 +229,19 @@ class BlockedDiscordAdapter(PlatformAdapter, ControlPlane, OutboundText):
         raise self._blocked()
 
     def leave(self) -> None:
-        raise self._blocked()
+        """A no-op, and idempotent, because the contract says it must be.
+
+        ``ControlPlane.leave`` is documented as "must be safe to call when not
+        joined", and raising broke that for every caller unwinding after a
+        failed join - they would have had to know whether the join succeeded
+        before they could clean up.
+
+        Safe to make a no-op precisely because this adapter can never join:
+        ``join`` still raises, so there is never a session for ``leave`` to
+        end. "You are not in a channel" is already true, which is what a
+        cleanup verb is being asked to ensure. It opens no capability, touches
+        no state, and leaves every other operation refusing.
+        """
 
     def participant_events(self) -> Iterator[ParticipantEvent]:
         raise self._blocked()

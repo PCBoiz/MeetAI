@@ -34,6 +34,29 @@ from dataclasses import dataclass, field
 from meetai.content import MeetingContent
 from meetai.errors import MeetAIError
 
+PLACEHOLDER_EVIDENCE: frozenset[str] = frozenset({"todo", "n/a"})
+"""Values that look like a citation and are not one.
+
+**[CHỐT THEO ỦY QUYỀN CỦA SƠN QUA CODEX] 2026-10-11.** ``evidence`` is
+documented as a short citation - a URL, a ticket, a test manifest - so blank
+is not one, and neither are these two once trimmed and case-folded.
+
+Exactly two entries, matched exactly. Measured before the change: ``""`` was
+already refused by a plain truthiness check, while ``"   "``, ``"TODO"``,
+``" TODO "``, ``"N/A"`` and ``"n/a"`` all got through. Deliberately **not**
+widened to substring or fuzzy matching: ``"ticket n/a-7"`` and ``"TODO-1234"``
+are plausible real citations, and a rule that caught them would trade a hole
+nobody has hit for false refusals nobody asked for.
+"""
+
+
+def _is_substantive(evidence: str | None) -> bool:
+    """Whether ``evidence`` is something a claim can actually rest on."""
+    if evidence is None:
+        return False
+    trimmed = evidence.strip()
+    return bool(trimmed) and trimmed.casefold() not in PLACEHOLDER_EVIDENCE
+
 
 class AdapterMisrepresentationError(MeetAIError):
     """An adapter's declared capabilities do not match what it can prove.
@@ -264,8 +287,12 @@ class PlatformAdapter:
                 )
             return
 
-        if capabilities.supports_inbound_audio and not capabilities.evidence:
+        if capabilities.supports_inbound_audio and not _is_substantive(
+            capabilities.evidence
+        ):
             raise AdapterMisrepresentationError(
-                "khai bao inbound audio ma khong co evidence. Day la cong bang "
-                "chung 0-S: can nguon chinh thuc hoac trace tai lap duoc."
+                "khai bao inbound audio ma khong co evidence thuc chat. Day la "
+                "cong bang chung 0-S: can nguon chinh thuc hoac trace tai lap "
+                "duoc. Chuoi rong, chuoi chi co khoang trang, hoac mot gia tri "
+                "giu cho deu khong phai evidence."
             )

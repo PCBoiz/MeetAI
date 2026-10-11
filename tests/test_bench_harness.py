@@ -15,6 +15,7 @@ second claim of the same kind.
 from __future__ import annotations
 
 import ast
+import pathlib
 import subprocess
 import sys
 from pathlib import Path
@@ -30,6 +31,8 @@ from benchmarks.bench_llm_policy import (
 )
 from benchmarks.gpulock import LOCK_PATH
 from benchmarks.policy_scoring import FailureKind
+
+from tests.corpus.llm_policy_vi import CORPUS
 
 BENCHMARKS = Path(__file__).resolve().parent.parent / "benchmarks"
 HARNESS_SOURCE = (BENCHMARKS / "bench_llm_policy.py").read_text(encoding="utf-8")
@@ -670,3 +673,197 @@ def test_the_module_level_import_did_not_touch_a_device() -> None:
     """Importing the harness must not read the GPU as a side effect."""
     assert isinstance(pf.REQUIRED_FREE_MIB, int)
     assert callable(classify_failure)
+
+
+class TestTemporaryFilesStayUnderTheRunsWorkDir:
+    """Class C: the prompt, the system prompt and the per-case raw output.
+
+    These are **not** result artifacts and are deliberately not held to the
+    fixed-root contract that ``var/`` writers are. They are inputs to one run,
+    they live wherever the operator pointed ``--work-dir``, and ``--work-dir``
+    is a free-form path by design - constraining it would be a product change,
+    not a test.
+
+    What *is* assertable without changing any behaviour is the **relationship**:
+    wherever the work directory is, a temporary file belongs inside it. That
+    holds today and this keeps it holding.
+
+    The second half matters more than it looks. Two of the three names are
+    built by interpolating ``case.case_id`` into a filename, and a path join
+    does not defend itself: ``Path("var/probe") / "C:/elsewhere/x.txt"``
+    is ``C:/elsewhere/x.txt`` - the absolute component **replaces** the base
+    rather than extending it, and ``../..`` traverses out. All 43 corpus ids
+    are plain today, so this is a guard on an input that is currently safe,
+    not a repair.
+    """
+
+    #: The result artifact's local name in ``main``. It is class A - the fixed
+    #: root contract covers it in ``test_benchmark_artifacts.py`` - and it is
+    #: named here so the two classes cannot quietly merge.
+    ARTIFACT_SINK_ROOT = "out"
+
+    WORK_DIR_ROOT = "work_dir"
+
+    @classmethod
+    def _path_root(cls, expr: ast.expr) -> str | None:
+        """Peel ``a / b / c`` and ``.joinpath(...)`` down to the leftmost name.
+
+        Returns ``None`` for anything that is not ultimately rooted in a plain
+        local name, which is the shape this invariant is about.
+        """
+        while True:
+            if isinstance(expr, ast.BinOp) and isinstance(expr.op, ast.Div):
+                expr = expr.left
+            elif (
+                isinstance(expr, ast.Call)
+                and isinstance(expr.func, ast.Attribute)
+                and expr.func.attr == "joinpath"
+            ):
+                expr = expr.func.value
+            elif isinstance(expr, ast.Attribute) and expr.attr == "parent":
+                expr = expr.value
+            else:
+                break
+        return expr.id if isinstance(expr, ast.Name) else None
+
+    @classmethod
+    def _assignment_roots(cls) -> dict[str, str]:
+        """Local name to the root of whatever it was assigned from.
+
+        Needed because the writes are one indirection away: the harness says
+        ``prompt_file = work_dir / ...`` and then ``prompt_file.write_text``,
+        so asking the receiver directly answers ``prompt_file`` rather than
+        ``work_dir``. Resolving that was this test's own bug, found by the
+        test failing on correct source.
+        """
+        roots: dict[str, str] = {}
+        for node in ast.walk(HARNESS_TREE):
+            if not isinstance(node, ast.Assign):
+                continue
+            root = cls._path_root(node.value)
+            if root is None:
+                continue
+            for target in node.targets:
+                if isinstance(target, ast.Name):
+                    roots[target.id] = root
+        return roots
+
+    @classmethod
+    def _resolve(cls, name: str | None, *, depth: int = 4) -> str | None:
+        """Follow assignments to the ultimate root, with a bound on cycles."""
+        roots = cls._assignment_roots()
+        seen = set()
+        while depth and name is not None and name in roots and name not in seen:
+            seen.add(name)
+            nxt = roots[name]
+            if nxt == name:
+                break
+            name, depth = nxt, depth - 1
+        return name
+
+    @classmethod
+    def _text_writes(cls) -> list[tuple[int, str | None]]:
+        """Every ``.write_text(...)`` in the harness, with its path's root."""
+        return [
+            (node.lineno, cls._resolve(cls._path_root(node.func.value)))
+            for node in ast.walk(HARNESS_TREE)
+            if isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr == "write_text"
+        ]
+
+    @staticmethod
+    def _local_assignment_roots(name: str) -> set[str]:
+        """What a local name was assigned from, by its own root name."""
+        roots: set[str] = set()
+        for node in ast.walk(HARNESS_TREE):
+            if not isinstance(node, ast.Assign):
+                continue
+            targets = {t.id for t in node.targets if isinstance(t, ast.Name)}
+            if name in targets:
+                roots.add(ast.unparse(node.value))
+        return roots
+
+    def test_every_temporary_write_is_rooted_at_the_work_dir(self) -> None:
+        strays = [
+            f"line {line}: rooted at {root!r}"
+            for line, root in self._text_writes()
+            if root not in {self.WORK_DIR_ROOT, self.ARTIFACT_SINK_ROOT}
+        ]
+        assert strays == [], (
+            f"a write in bench_llm_policy.py is rooted outside the run's work "
+            f"directory: {strays}. Temporary files belong under --work-dir; if "
+            "this one is a result artifact instead, it belongs in the fixed-root "
+            "contract and in test_benchmark_artifacts.py, not here."
+        )
+
+    def test_the_prompt_and_output_names_are_built_from_the_work_dir(self) -> None:
+        """Name the three class-C writes, so a fourth has to be classified.
+
+        Counting them is the point: a new temporary file added without thought
+        fails this and its author has to say which class it is in.
+        """
+        temporary = [
+            line for line, root in self._text_writes() if root == self.WORK_DIR_ROOT
+        ]
+        assert len(temporary) == 3, (
+            f"expected three temporary writes under the work directory, found "
+            f"{len(temporary)} at lines {temporary}. A new one needs classifying: "
+            "temporary input, result artifact, generator output or lock."
+        )
+
+    def test_the_artifact_sink_is_still_a_separate_class(self) -> None:
+        """The result artifact must not drift into being work-dir rooted.
+
+        If it ever is, the fixed-root contract silently stops applying to it,
+        and the test that enforces that contract lives in another file and
+        would not notice.
+        """
+        sinks = [
+            line for line, root in self._text_writes() if root == self.ARTIFACT_SINK_ROOT
+        ]
+        assert len(sinks) == 1, f"expected one artifact sink, found {sinks}"
+        assert any(
+            "artifact_path" in source for source in self._local_assignment_roots("out")
+        ), "the artifact sink stopped coming from artifact_path()"
+
+    @staticmethod
+    def _leaves_its_directory(name: str) -> bool:
+        """Would interpolating ``name`` into a filename leave the directory?
+
+        Asked of the component rather than by simulating a join, because join
+        semantics differ between path flavours - a drive letter replaces the
+        base on Windows and does not on POSIX - and the property wanted here
+        is the same on both: a case id is a *name*, not a path.
+        """
+        return (
+            "/" in name
+            or "\\" in name
+            or ":" in name
+            or name in {".", ".."}
+            or name.startswith(".")
+            or ".." in name.split(".")
+        )
+
+    def test_no_corpus_case_id_can_leave_the_work_dir(self) -> None:
+        escaping = [
+            case.case_id
+            for case in CORPUS.cases
+            if self._leaves_its_directory(case.case_id)
+        ]
+        assert escaping == [], (
+            f"a case id would escape the work directory when interpolated into a "
+            f"filename: {escaping}. Case ids are names, not paths."
+        )
+        assert len(CORPUS.cases) == 43, "corpus size changed; re-check the ids"
+
+    def test_the_escape_check_catches_what_it_is_for(self) -> None:
+        """Control, both directions, plus the consequence it guards against."""
+        for bad in ("../escape", "..", "sub/dir", "sub\\dir", "C:/elsewhere/x", "."):
+            assert self._leaves_its_directory(bad), bad
+        for good in ("S.plain.01", "A-1_b", "case.02"):
+            assert not self._leaves_its_directory(good), good
+        # Why it matters: an absolute component replaces the base entirely.
+        base = pathlib.PureWindowsPath("var/probe/llm-policy")
+        assert (base / "C:/elsewhere/x.txt").as_posix() == "C:/elsewhere/x.txt"
+        assert ".." in (base / "../../escape.txt").parts

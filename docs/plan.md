@@ -515,7 +515,8 @@ nhóm **không được** ngụ ý một độ phủ không có.
 Chỉ bắt đầu khi có bằng chứng cho 0-S và 0-P, và chủ dự án giao tiếp tục.
 
 - Nguồn chính thức hoặc ticket đủ cụ thể về: standard bot account/token, guild voice, inbound audio/PCM, participant mapping, API/SDK version, quyền cần thiết
-- Rà Developer Terms/Policy **tại ngày triển khai**; xác định review/approval
+- Rà Developer Terms/Policy **tại ngày triển khai**; xác định review/approval. Bản đọc nguồn chính thức lượt 36 ở [research note Gate 0-P](research/2026-10-10-gate-0p-discord-policy.md) nêu yêu cầu privacy policy và sửa/xoá API Data; **chưa đóng 0-P** cho route MeetAI cụ thể.
+- Voice Connections hiện mô tả UDP receive/send và DAVE E2EE từ 2026-03-01; vẫn cần chứng minh route bot guild, mapping SSRC→user và bản dựng DAVE cụ thể trước khi 0-S đóng.
 - Test server/channel riêng do chủ dự án kiểm soát
 - Trace metadata-only trước, rồi synthetic tone, rồi consent-gated end-to-end
 - Lưu test manifest/build/version; **không** raw audio
@@ -523,11 +524,255 @@ Chỉ bắt đầu khi có bằng chứng cho 0-S và 0-P, và chủ dự án gi
 
 ---
 
+### Lượt 41 — rà chất lượng guard persistence
+
+Lát test-only, nghĩa vụ **C-12**. Probe tìm ra **6 dạng ghi file đi lọt**, tất cả cùng một nguyên nhân: guard khớp theo **cách viết tên receiver**, nên alias và from-import vượt qua. Sửa bằng cách phân giải **import binding** của chính file trước khi khớp, nên `o.remove`, `remove` và `os.remove` cùng quy về `os.remove`. **7 mutation trên file `src/` thật, cả 7 đỏ.** Thêm hai control đã commit: một cho phía *phải bắt*, một cho phía *phải im* — nếu thiếu control thứ hai thì làm guard "mạnh hơn" bằng cách luôn trả `True` cũng sẽ qua được suite.
+
+### Lượt 43 — phân loại **mọi** đường ghi trong `benchmarks/`
+
+Khảo sát bằng AST: **28 lời gọi ghi** trên **11 file**. Chúng **không cùng một loại**,
+nên cố ý **không** áp một quy tắc chung "mọi thao tác ghi phải qua `artifact_path()`".
+
+| Nhóm | File / dòng | Ghi gì | Path do ai chọn | Thuộc hợp đồng `var/` cố định? |
+|---|---|---|---|---|
+| **A. Artifact kết quả** | 5 harness model + `rescore_llm_policy.py` | JSON kết quả đo | `--out`, **qua `artifact_path()`** | **CÓ** — S2.1 quyết định #2 |
+| **B. Output suy ra từ input** | `postprocess_asr.py:261` | JSON chỉ số suy ra | **Cạnh file `--results`** (`with_name`), tức theo input người chạy truyền | **KHÔNG** — xem ghi chú dưới |
+| **C. File tạm / prompt** | `bench_llm_policy.py:408, 583, 591, 712` | prompt, system prompt, output thô từng case | `--work-dir` | **KHÔNG** — đây là **input cho một lần chạy**, không phải artifact kết quả |
+| **D. Manifest / clip do generator tạo** | `make_noise_group.py:206`, `make_nonspeech_clips.py:68,127`, `make_vietmed_manifest.py:242` | manifest, clip tổng hợp | hằng số module hoặc `--out` | **MỘT PHẦN** — `make_noise_group` đã qua helper từ lượt 35; ba cái còn lại tạo **dữ liệu đầu vào**, không phải kết quả |
+| **E. GPU lock** | `gpulock.py:131,145,154,165` | file lock rỗng (PID) | hằng số module | **KHÔNG** — lock là **cơ chế đồng bộ**, không phải artifact. Ép nó qua helper sẽ đụng hành vi mà `test_bench_harness.py` đang ghim |
+
+**Vì sao không gộp:** một file lock bị xoá là **đúng** (nhả khoá); một artifact kết quả
+bị xoá là **mất bằng chứng**. Một prompt tạm nằm trong `--work-dir` của một lần chạy;
+một kết quả phải nằm đúng chỗ đã chốt để còn tìm lại được. Gộp cả năm nhóm vào một
+luật sẽ làm luật đó hoặc quá lỏng cho nhóm A, hoặc sai cho nhóm E.
+
+**Đã sửa — nhóm A, một chỗ không nhất quán:** `rescore_llm_policy.py` ghi **đúng cùng
+loại artifact** như `bench_llm_policy.py`, từ **đúng cùng một cờ `--out`**, nhưng
+`bench_llm_policy` đi qua `artifact_path()` còn `rescore` thì **không**. Tái lập bằng
+control trước khi sửa (`got [False]`), rồi sửa. **Vị trí output mặc định KHÔNG đổi** —
+`bench/llm-policy-s23-rescored.json` dưới root vẫn ra đúng
+`var/bench/llm-policy-s23-rescored.json`; thứ được thêm là **ràng buộc**, không phải
+một vị trí mới.
+
+**[CHỜ SƠN] Hai mục KHÔNG tự sửa, vì chúng đổi nội dung artifact hoặc workflow:**
+
+1. **Đường dẫn người chạy truyền bị nhúng vào NỘI DUNG artifact** —
+   `bench_llm_policy.py:768` ghi `"model": {"path": str(model)}` và
+   `rescore_llm_policy.py:66` ghi `"derived_from": str(source)`. Lượt 26 đã sửa
+   **thông báo từ chối** rò đường dẫn + username, nhưng ranh giới lát đó nói rõ
+   *"giữ nguyên nội dung artifact của benchmark thành công"*. Phần dư đã ghi ở
+   `PROJECT_STATE` chỉ liệt kê các dòng **in ra stdout** — **không** liệt kê hai chỗ
+   nhúng vào **nội dung JSON** này. Nay đã ghi.
+   **Lựa chọn và hệ quả:** (a) giữ nguyên — artifact S2.3 đã đo vẫn so sánh được,
+   nhưng một artifact chia sẻ ra ngoài sẽ mang đường dẫn máy; (b) đổi sang basename
+   hoặc digest — **đổi nội dung artifact**, nên các bản ghi cũ không còn so byte được
+   với bản mới, và cần quyết định có đo lại hay không.
+2. **`postprocess_asr.py` ghi cạnh file input.** Nếu người chạy trỏ `--results` ra
+   ngoài `var/`, output cũng ra ngoài. **Giảm nhẹ đã có:** `.gitignore:127` phủ
+   `*derived.json` ở **mọi** vị trí, nên nó không commit được. Sửa đồng nghĩa với
+   **phát minh một vị trí output mới** cho nó, tức đổi thói quen vận hành — không
+   phải việc tự quyết.
+
+### Lượt 44 — nhóm C: ghim **quan hệ**, không ghim vị trí
+
+Khảo sát riêng nhóm C trong `bench_llm_policy.py` (prompt, system prompt, output
+thô từng case).
+
+**Kết quả khảo sát — `--work-dir` là đường dẫn TỰ DO theo thiết kế.** Mặc định
+`var/probe/llm-policy`, nhưng `work_dir = pathlib.Path(args.work_dir)` **không
+ràng buộc**. Ép nó vào `var/` là **đổi hành vi sản phẩm**, nên **không làm** —
+đúng chỉ thị.
+
+**Thứ lập được mà KHÔNG đổi hành vi: quan hệ.** Dù work-dir ở đâu, một file tạm
+phải nằm **bên trong** nó. Ba đường ghi tạm (408 `prompt_file`, 591 `system_file`,
+712 `.out.txt`) đều bám gốc `work_dir` — **đã xác minh bằng AST**, có theo vết một
+bậc gán, vì hai trong ba đi qua biến cục bộ.
+
+**Vector thoát có thật, và hôm nay chưa bị chạm.** Hai trong ba tên file nội suy
+`case.case_id`, mà một phép `/` **không tự bảo vệ**:
+
+| Nội suy | Kết quả |
+|---|---|
+| `Path("var/probe") / "C:/elsewhere/x.txt"` | **`C:/elsewhere/x.txt`** — thành phần tuyệt đối **thay thế** gốc |
+| `Path("var/probe") / "../../escape.txt"` | thoát bằng traversal |
+
+**43/43 case id hiện đều là tên thuần** (`[A-Za-z0-9._-]+`), nên đây là **canh một
+đầu vào đang an toàn**, không phải sửa lỗi. Test ghim: id là **tên**, không phải
+đường dẫn.
+
+**Không gộp nhóm.** Một test riêng khẳng định sink artifact (`out`) **vẫn là lớp
+khác** và vẫn đến từ `artifact_path()` — nếu nó trôi sang gốc `work_dir`, hợp đồng
+fixed-root sẽ âm thầm thôi áp dụng, và test canh hợp đồng đó nằm ở **file khác** nên
+sẽ không thấy. Và một test đếm **đúng ba** file tạm: thêm cái thứ tư là phải phân
+loại nó.
+
+**Không đổi:** `--work-dir` vẫn tự do · không ép vào `var/` · không biến work-dir
+thành vị trí output · không đổi schema hay nội dung artifact thành công · không đụng
+`model.path` / `derived_from` (quyết định riêng của Sơn vì ảnh hưởng khả năng so sánh
+artifact S2.3).
+
+**Nghĩa vụ spec:** không mục nào đổi trạng thái. Nhóm C là **vệ sinh nội bộ của
+harness**, không phải một nghĩa vụ trong `docs/spec.md`; ghi ra đây thay vì nhét vào
+một hàng cho có.
+
+### Lượt 45 — nhóm D: generator, theo từng sink
+
+**Phân biệt trước, rồi mới nói tới luật.** Cả ba file sinh **dữ liệu đầu vào**
+(manifest + clip audio tổng hợp), **không** sinh kết quả benchmark. Nên hợp đồng
+artifact-kết-quả **không** tự động áp lên chúng, và tôi **không** áp luật chung.
+
+| Sink | Dữ liệu | Mục đích | Path do ai chọn | Hợp đồng đã chốt? | Nguy cơ |
+|---|---|---|---|---|---|
+| `make_noise_group.py:125` WAV | audio trộn nhiễu | **đầu vào được sinh** | `--out-root` (**người chạy**, mặc định `var/asr/noise`) | không | path tự do; ghi đè theo tên |
+| `make_noise_group.py:205` manifest | JSON | đầu vào được sinh | **cố định, qua `artifact_path`** | **CÓ** (lượt 35) | ghi đè khi chạy lại |
+| `make_nonspeech_clips.py:46,68` WAV | audio phi lời nói | đầu vào được sinh | **cố định** → nay qua helper | **CÓ** (lượt 45) | ghi đè khi chạy lại |
+| `make_nonspeech_clips.py:127` manifest | JSON | đầu vào được sinh | **cố định** → nay qua helper | **CÓ** (lượt 45) | ghi đè khi chạy lại |
+| `make_vietmed_manifest.py:242` manifest | JSON | đầu vào được sinh | `--out` (**người chạy**) | **không** → [CHỜ SƠN] | path tự do; thoát được `var/` |
+
+**Thứ đã sửa là một TAI NẠN, không phải một luật mới.** `CLIP_ROOT` và `MANIFEST`
+là **hằng literal cố định đã trỏ sẵn vào `var/asr/`**, và sibling của chúng
+(`make_noise_group`) **đã** đi qua helper từ lượt 35. Lý do chúng bị bỏ sót: phép
+kiểm cũ hỏi **tên biến** có chứa `out`/`target`/`dest` hay không — `CLIP_ROOT` và
+`MANIFEST` không chứa, nên lọt. **Vị trí không đổi một ký tự** sau khi sửa, đã xác
+minh.
+
+**Phép kiểm nay hỏi CÁCH DÙNG thay vì TÊN.** Một path bị gọi phương thức ghi lên là
+**output**; `WHISPER`, `LLAMA`, `BUILD_DIR` **chưa bao giờ** bị ghi nên là **input**
+— và ép một input qua helper-output sẽ là **sai**, không phải chặt hơn. Có test cho
+**cả hai chiều**, nếu không thì "mở rộng cho bắt hết" sẽ kéo luôn ba hằng input vào
+mà suite không phản đối.
+
+#### [CHỜ SƠN] — hai mục cần quyết định vị trí/workflow
+
+1. **`make_vietmed_manifest --out` là đường dẫn tự do.** Khác hai file kia: nó nhận
+   path từ người chạy. (a) **Giữ tự do** — nhất quán với việc đây là *dữ liệu đầu
+   vào do người chạy dàn dựng*, và `--clip-root`/`--transcript` cũng là path người
+   chạy chọn; (b) **Ràng buộc như artifact kết quả** — nhưng khi đó input vẫn tự do
+   còn output thì không, tức ràng buộc **một nửa**, và đổi thói quen vận hành.
+2. **`make_noise_group --out-root` cũng tự do**, và đó là nơi **audio** đi ra. Cùng
+   hình dạng câu hỏi như (1).
+
+**Ghi nhận, không phải quyết định:** cả bốn generator **ghi đè theo tên cố định** khi
+chạy lại — không có versioning. Đây là rủi ro mất dữ liệu đã sinh, không phải lỗ an
+toàn, và việc có cần versioning hay không là quyết định sản phẩm.
+
+**Không chạy generator nào** — chúng tạo audio thật và một cái cần dataset tải về.
+
+### Lượt 46 — hai mục "đang chờ" hoá ra không phải quyết định
+
+**Quyết định được uỷ quyền, ghi đúng nguồn.** **[CHỐT THEO ỦY QUYỀN CỦA SƠN QUA
+CODEX]** 2026-10-11: giữ `make_vietmed_manifest --out` và `make_noise_group
+--out-root` **là đường dẫn tự do**. Lý do ghi lại: đây là nơi người chạy chủ động
+dàn manifest/audio **đầu vào được sinh**; chúng **không** phải artifact kết quả
+thuộc hợp đồng S2.1, và ép vào `var/` sẽ đổi workflow mà **không tạo thêm bằng
+chứng** nào về chất lượng hay nguồn gốc dữ liệu. **Giữ nguyên hành vi**: không thêm
+`--force`, không đổi hành vi ghi đè. *(Đây là uỷ quyền qua Codex, **không** phải một
+phát ngôn trực tiếp khác của Sơn.)*
+
+**Rà danh sách chờ, và hai mục rụng ra vì bằng chứng, không vì quyết định:**
+
+| Mục | Hoá ra là gì |
+|---|---|
+| *Sensitivity theo field hay theo card* | **Đọc nhầm.** Hồ sơ dòng 136 liệt kê `sensitivity` **trong field tối thiểu của một card** — card-level, **đúng y code**. Thứ đọc thành field-level là `visibility` của **Profile** (dòng 128), **thực thể khác** |
+| *Chỗ đặt phép kiểm scope* | **Spec đã ghi đúng từ trước**; thiếu là **bằng chứng**, không phải câu trả lời. Nay có test |
+
+**Phần vẫn chờ Sơn, tách bạch:** *một câu hỏi trong họp map sang scope nào* — đó là
+quyết định sản phẩm, và spec vốn đã nói thế. Lát này **không** chạm vào nó.
+
+**Một lỗ trong chính test của tôi, do mutation tìm ra.** Bản đầu khẳng định ở mức
+**module** ("knowledge.py có so scope"), và nó **lọt** mutation xoá đúng bộ lọc trong
+`retrieve` — vì `conflicts` và `purge_scope` **cũng** so scope, nên phép đếm vẫn khác
+0. Thu hẹp xuống mức **hàm** thì bắt được. Đọc lại test không thấy điều này; mutation
+thấy.
+
+### Lượt 47 — `leave()` theo đúng hợp đồng
+
+**[CHỐT THEO ỦY QUYỀN CỦA SƠN QUA CODEX]** `BlockedDiscordAdapter.leave()` thành
+**no-op idempotent**, đúng `ControlPlane.leave` (*"Must be safe to call when not
+joined"*). An toàn vì `join()` **vẫn raise**, nên không bao giờ có phiên để `leave`
+kết thúc — **không mở năng lực Discord nào**. `health`, capabilities, `send_text`,
+`join`, `participant_events` và mọi gate **giữ nguyên**.
+
+Ca test cũ gom `leave` vào nhóm *"mọi operation raise"* nay tách: `join` và
+`participant_events` vẫn phải raise; `leave` có ba ca riêng, trong đó ca **"không
+đổi gì quan sát được"** là ca ngăn một "no-op" lén đổi trạng thái.
+
+### Lượt 47 lát 2 — matcher tên platform: **không mở rộng**
+
+**[CHỐT THEO ỦY QUYỀN CỦA SƠN QUA CODEX]** giữ so khớp **chính xác** sau
+`strip().lower()`. **Không sửa implementation**; lát này là **test + tài liệu**.
+Giới hạn được **ghi thành ledger** (4 tên vẫn lọt), kèm khẳng định riêng rằng
+`synthetic=True` **vẫn được báo cáo dù tên là gì** — cái tên không phải control.
+Ledger **không** mô tả các tên đó là bằng chứng integration an toàn.
+
+### Lượt 48 — một giá trị giữ chỗ không phải evidence
+
+**[CHỐT THEO ỦY QUYỀN CỦA SƠN QUA CODEX]** `evidence` là một **trích dẫn**, nên rỗng,
+chỉ-khoảng-trắng, và hai giá trị giữ chỗ **chính xác** `TODO` / `n/a` không thoả.
+
+**Đo trước khi sửa, trên đường gọi thật:** `""` vốn đã bị chặn; `"   "`, `"\t\n "`,
+`"TODO"`, `" TODO "`, `"N/A"`, `"n/a"` **đều lọt**, và **không lớp nào khác chặn**.
+Sửa tối thiểu tại chính nơi validation đang có. **Không mở rộng** sang substring/
+fuzzy — `"na"`, `"TODO-1234"`, `"ticket n/a-7"` vẫn được nhận, có test ghim ranh
+giới. **6 mutation đều đỏ.**
+
+**[CHỜ SƠN] Consent TTL** — mặc định giữ `None`. Đây là chính sách **quyền riêng tư
+và thời hạn đồng ý**; không suy ra được con số từ code.
+
+### Lượt 49 — addressing với registry rỗng: khảo sát, rồi ghim đúng một thứ
+
+**Khảo sát (AST, không grep):** `classify_address()` có **0 call site** trong `src/`;
+`AliasRegistry()` được dựng **0 lần**. Ba lần `grep` khớp là **định nghĩa**,
+**`__all__`** và một **annotation**. Đường sống duy nhất (`dryrun.py:610`) dựng
+`AddressContext` thẳng từ field fixture.
+
+| Kết luận | Trạng thái |
+|---|---|
+| **An toàn:** thiếu alias không tạo quyền nói; mặc định `UNCLEAR`/không reply | **đã ghim kín từ trước** — không nhân bản |
+| **Giới hạn vận hành:** không alias thì không nhận diện lời gọi đích danh; turn-context độc lập nhưng đòi speaker mapping tin cậy, mà **Gate 0-C vẫn mở** | ghi lại, không phải lỗi |
+| **Đường dây nối:** classifier chưa có caller nào | **chưa ghim → lát này ghim** |
+
+Ledger + khoá hai chiều với tài liệu, cùng hình dạng ledger media gate. Lý do cần:
+`ResponseRequest` ghi `address` *"comes from the addressing classifier"* — đúng như
+một phát biểu **hợp đồng**, **không** phải "đã nối". Dự án đã có một lần người đọc
+bước nhầm đúng kiểu đó.
+
+**Không** tạo alias mặc định, **không** đổi logic addressing, **không** thêm caller
+runtime, **không** mở Gate 0-C.
+
 ## Lô tiếp theo
 
-**S2.2 phần 2** — WER trên FLEURS `vi_vn` (nhánh permissive) rồi VIVOS (nhánh NC, tách nhãn). Phần 1 (co-residency + nhóm non-speech + scorer) đã xong ở lượt 9.
+**Giữ cấp A; tiếp tục việc không cần model.** Phương án A cho RAM đã được chọn:
+mọi lần chạy model CPU tiếp tục bị từ chối, hai ngưỡng RAM vẫn chưa đặt, không
+chạy GPU/model trong khi digest còn rỗng và egress OS chưa attested.
 
-Sau đó, hai nhánh **không** phụ thuộc nhau: Phase 2 (benchmark model, cần thời gian máy) và Phase 3 (cần Discord trả lời). Nhánh nào có bằng chứng trước thì làm trước.
+1. **[XONG lượt 37]** Bảng traceability đã lập trong
+   [checklist privacy/consent Gate 0-P](research/2026-10-10-checklist-privacy-consent-gate-0p.md):
+   9 dòng P0-1…P0-9, mỗi dòng gắn *đã có trong code (kiểm chứng ở HEAD)* / *thiếu* /
+   *bằng chứng cần có* / *gate*. Ba đính chính từ việc đối chiếu, đáng đọc trước khi
+   dùng bảng: `require_media_processing_allowed()` **không có caller nào** trong
+   `src/` nên là nghĩa vụ hướng tới chứ không phải control đang chạy; `ConsentState`
+   **không có member falsy** (fail-closed tầng chính sách đến từ `ConsentMode`/
+   `LateJoinPolicy`); và P0-6 suýt ghi sai vì `train` khớp trong `con`**`strain`**`t`.
+   Việc đọc được Terms **không** là xác nhận route được phép.
+2. Tiếp tục các lát cấp A và test-only có acceptance criteria đã có; không mở
+   listener, media sink, persistence hay thay đổi policy consent.
+   **Lượt 38 đã đối chiếu lại bảng P0 với source: 18/18 khẳng định đúng, không mục
+   nào phải sửa** — kiểm bằng AST, kèm control cho thấy grep `train` vẫn khớp 3 file
+   qua `con`**`strain`**`t`. **Việc kế tiếp không cần quyết định sản phẩm:** ghim các
+   khẳng định đó thành **test hồi quy**, để nếu ai nối
+   `require_media_processing_allowed()` vào một đường thật thì test đỏ và buộc cập
+   nhật tài liệu, thay vì bảng âm thầm sai.
+   **[XONG lượt 39]** — nhưng **không ghim cả 18**: phân loại trước đã tách ra
+   **2** mục đáng ghim (`TestNoPersistenceYet`, `TestTheMediaGateHasNoCallerYet`),
+   **5** mục đã có test, **3** mục chỉ ghi tài liệu, và **3** số đo **cố ý không**
+   ghim — gồm số lượng test, vì biến nó thành hợp đồng là biến phép đo thành mục
+   tiêu. Cả hai test mới có thông báo lỗi nói rõ một thay đổi hợp lệ **không phải**
+   lỗi sản phẩm.
+2a. **[XONG lượt 40]** Gia cố test AST “không ghi file” để nhận `Path.open`, `Path.unlink`, `os.open`, `os.write` và API sao chép/xoá. Test mục tiêu 101 passed; full suite 5179 passed, 3 skipped, 1 warning. Ruff/mypy xanh. `uv run` trả Access denied nên dùng interpreter `.venv`. Không chạy model, không đổi policy.
+2b. **[XONG lượt 42]** Thay kiểm tra token `artifact_path` bằng truy nguồn AST theo phép gán tuyến tính từ helper tới JSON `write_text` sink trong 5 harness model; thêm control cho helper import chết, direct path, alias, helper không import và gán lại biến sau khi dùng. Mutation thay helper bằng `pathlib.Path` bị bắt ở cả 5 harness. Phạm vi chỉ là artifact JSON kết quả, không mọi ghi trong `benchmarks/` (file tạm/generator/lock là lớp riêng). Test mục tiêu 30 passed; full suite 5183 passed, 3 skipped, 1 warning; Ruff/mypy xanh. Không chạy model.
+3. Chỉ quay lại cấp B khi điều kiện RAM riêng cho LLM/ASR, digest mô hình và
+   cô lập egress OS đều có bằng chứng đã được duyệt.
 
 ### Ba quyết định của Sơn ở lượt 11
 
