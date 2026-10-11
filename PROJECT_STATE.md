@@ -28,7 +28,7 @@ Cập nhật 2026-10-11 lượt 51. **Mục này phải được làm mới mỗ
 
 | Hạng mục | Thực tế |
 |---|---|
-| Git | Repo local `D:/MeetAI`, branch `main`, **114 commit** tính đến `c3b1c3f`. **Bản công khai: `PCBoiz/MeetAI` `refs/heads/main` = `88d32ab`** — snapshot làm mới ở lượt 50: **2 commit**, chỉ danh tính `Claude <noreply@anthropic.com>`, **tree khớp tuyệt đối** tree của `main`, và **`main` KHÔNG phải ancestor**, nên email cá nhân trong metadata commit **không** được công khai. Đẩy dạng **fast-forward**, không force. *(Ghi chú cũ, giữ làm lịch sử:)* **105 commit sau lát 42**. Lượt 41 commit là `6bc2b7c`; lát 42 đã commit, xem `git log -1` để lấy SHA. Tree sạch; remote chưa được xác minh độc lập. |
+| Git | Repo local `D:/MeetAI`, branch `main`, **114 commit** tính đến `c3b1c3f`. **Bản công khai: `PCBoiz/MeetAI` `refs/heads/main` = `41d4aac`** (lượt 51; **3 commit**, tree `d193427` khớp tree của `main`, 154 file, `main` **không** phải ancestor) *(lượt 50 là `88d32ab`)* — snapshot làm mới ở lượt 50: **2 commit**, chỉ danh tính `Claude <noreply@anthropic.com>`, **tree khớp tuyệt đối** tree của `main`, và **`main` KHÔNG phải ancestor**, nên email cá nhân trong metadata commit **không** được công khai. Đẩy dạng **fast-forward**, không force. *(Ghi chú cũ, giữ làm lịch sử:)* **105 commit sau lát 42**. Lượt 41 commit là `6bc2b7c`; lát 42 đã commit, xem `git log -1` để lấy SHA. Tree sạch; remote chưa được xác minh độc lập. |
 | Code | `src/meetai/` **22 module** + `__init__.py` + `adapters/{base,fake}.py` (đếm bằng `ls`; lượt 18 ghi "20" là lệch). Lượt 19 thêm `retrieval.py` - bước 4 pipeline, framework-free, **metadata + lexical, không embedding** (spec `K-8` cố ý `absent`). |
 | Benchmark | `benchmarks/` **20 module** (lượt 51 thêm `readiness.py`; trước đó **19**) (lượt 32 thêm `winmem.py`, lượt 35 thêm `artifacts.py`) (đếm bằng `glob('*.py')`; ô này từng ghi "15" và đã lệch — lượt 25 đo được **16**, lượt 26 thêm `refusals.py`). **Lượt 26:** `refusals.py` giữ allowlist 10 `ARTIFACT_ROLES` và `missing_artifact()`; mọi nhánh từ chối sớm in **role**, không in đường dẫn. **Lượt 27 đếm lại từ AST: sáu CLI có 16 kiểm tra artifact** (3/5/2/1/2/3) — lượt 26 ghi "7 nhánh" là **trộn đơn vị** (7 là số *ca test*). Nay **16/16 nhánh có ca cô lập** và **10/10 role** được chạm, khẳng định bằng ma trận so với AST. Lượt 13 thêm `policy_scoring.py` (scorer tất định, pure, test không cần model), `bench_llm_policy.py` (harness S2.3), `rescore_llm_policy.py` (chấm lại từ generation đã lưu, không chạy lại model). **Không** vào `pyproject.toml`. |
 | Test | **Lượt 42:** full suite bằng `.venv\Scripts\python.exe -m pytest -q` → **5183 passed, 3 skipped, 1 warning**, exit 0. Test mục tiêu `tests/test_benchmark_artifacts.py` → **30 passed**. Ruff format → **145 files**, Ruff lint xanh, mypy → **86 source files**; cả bốn kiểm tra exit 0. Cảnh báo là `StarletteDeprecationWarning` về httpx. `uv run` lần này trả Access denied; không dùng nó để báo kết quả. |
@@ -427,6 +427,24 @@ không đổi egress/firewall/consent, không force-push.** Mọi gate giữ **f
   trong lịch sử **cục bộ**. Gỡ khỏi lịch sử đòi viết lại, mà `AGENTS.md` cấm. Điều
   này **không** ảnh hưởng bản công khai: `main` và ancestry của nó **không bao giờ**
   được đẩy, và snapshot chỉ mang **tree**, không mang commit nào của `main`.
+
+- **[ĐÃ ĐO] Đã xuất bản snapshot mới, xác minh **từ remote**.**
+  `refs/heads/main` = **`41d4aac`** (`88d32ab..41d4aac`, **fast-forward**, không force,
+  không token trong URL, không credential nào được in hay lưu). Dựng bằng plumbing:
+  `commit-tree <tree của main> -p 88d32ab`, nên **không commit nào của `main`** nằm
+  trong ancestry. Đo lại sau khi fetch: đúng **một ref**; tree `d193427` **khớp tuyệt
+  đối** tree của `main`; **3 commit**; đúng **một** danh tính
+  `Claude <noreply@anthropic.com>`; `main` **không** phải ancestor; **0 commit trùng
+  SHA** giữa hai lịch sử; **154 file**; **0** mảnh email/tên tài khoản cá nhân trong
+  blob đã công khai.
+
+  **Phạm vi phép rà, và giới hạn được nêu:** quét **cả 154 blob đã commit** (không
+  phải diff, không phải working tree) — **0** hit trên 8 pattern credential và trên
+  tên tài khoản/mảnh email của Sơn; chuỗi dạng địa chỉ duy nhất là fixture tấn công
+  tổng hợp và `noreply@anthropic.com`; không file audio/transcript/model/dataset/archive;
+  không `.env`; không gì tracked dưới `var/`, `models/`, `data/`, `media/`, `logs/`.
+  **Giới hạn:** `docs/proposal/*.pdf` là binary **nén**, nên phép quét byte **yếu hơn**
+  với nó; nguồn `.md` sinh ra nó nằm trong cây và quét sạch.
 
 - **[CHỜ SƠN] Không đụng gì:** Consent TTL/mode, late-join, persistence/retention,
   privacy wording, 16 nhãn eval, **hai ngưỡng RAM**, scope câu hỏi họp, permit media
