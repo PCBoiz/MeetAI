@@ -775,6 +775,38 @@ cáo thì không test nào thấy. Đã ghi, không che.
 **Không** chạy model/GPU/benchmark, **không** đặt ngưỡng, **không** ghim digest,
 **không** đổi `EGRESS_ISOLATION_ATTESTED`, **không** mở cổng nào.
 
+### Lượt 52 — viết lại proposal cho người đọc chưa xem repo
+
+**Không** sửa `src/`, `tests/`, `docs/spec.md` hay acceptance criteria. Lát này chạm
+**đúng hai file**: `docs/proposal/meetai-de-xuat-du-an.vi.{md,pdf}`.
+
+**Vì sao làm:** bản cũ (357 dòng / 9 trang) đúng nhưng **giả định người đọc đã biết
+dự án**. Yêu cầu mới: người chưa xem repo vẫn hiểu MeetAI giải quyết gì, cho ai, đang
+ở đâu, cần nguồn lực gì, lộ trình ra sao, và điều kiện nào phải đạt trước từng cấp.
+
+**Kết quả:** 13 chương **A-M** + mục lục, **1 768 dòng**, PDF **46 trang**. Bố cục giữ
+các đặc điểm hữu ích của một outline dự án (thông tin dự án · mô tả · mục tiêu · kỹ
+năng · gói công việc · kết quả bàn giao · tiêu chí đánh giá) và mở rộng chúng.
+
+| Tiêu chí nghiệm thu | Kết quả |
+|---|---|
+| Mọi phát biểu năng lực có nhãn | **đạt** — 6 nhãn, định nghĩa ở §0.2 |
+| Không phần trăm tiến độ / ngày lịch / SLA / chi phí / throughput / cấu hình tối thiểu | **đạt** — các mục chưa có dữ kiện ghi `[CHỜ BẰNG CHỨNG]` |
+| Tách **khối lượng công việc** khỏi **thời gian chờ quyết định** | **đạt** — hai cột riêng ở §I.7 |
+| Hai sơ đồ kiến trúc không thể đọc nhầm nhau | **đạt** — sơ đồ mục tiêu đánh dấu `⟦CHƯA CÓ⟧` từng khối |
+| Mọi số đối chiếu lại từ source/spec/plan/artifact | **đạt** — đếm trực tiếp, 2026-10-11 |
+| Nguồn chính thức có URL + ngày truy cập + kết luận nó đỡ | **đạt** — 11 nguồn; nói rõ **không** tự đọc lại trong lượt viết |
+| Nguồn ↔ PDF đồng bộ, QA trực quan **đủ mọi trang** | **đạt** — **46/46 trang**, trên ảnh của **chính PDF** |
+| Không rò định danh / đường dẫn / credential | **đạt** — quét `.md` **và** text layer PDF **đã giải nén**: 0/9 nhóm mẫu |
+| Tài liệu mẫu giữ nguyên trạng | **đạt** — chỉ đọc; mtime không đổi |
+
+**Hai lỗi bố cục do chính phép QA tìm ra và đã sửa:** (1) ngắt trang theo chương tạo
+nhiều trang gần trống (51 trang) -> bỏ, còn **46 trang**; (2) **26/26 anchor mục lục
+hỏng** vì pandoc sinh id khác cách viết tay -> gắn id tường minh, đo lại **0 hỏng**.
+
+**Phần dư ghi rõ:** §E.4 (7 cột) và §I.7 (8 cột) xuống dòng nhiều — đọc được, không
+vỡ; tr.10/11/46 còn khoảng trắng vì giữ sơ đồ ASCII nguyên khối, là đánh đổi cố ý.
+
 ## Lô tiếp theo
 
 **Giữ cấp A; tiếp tục việc không cần model.** Phương án A cho RAM đã được chọn:

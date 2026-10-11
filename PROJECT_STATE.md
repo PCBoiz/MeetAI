@@ -2,7 +2,7 @@
 title: "MeetAI - Trạng thái dự án (sổ ghi bền vững)"
 owner: "Sơn"
 created: "2026-10-07"
-last_updated: "2026-10-11 (lượt 51)"
+last_updated: "2026-10-11 (lượt 52)"
 purpose: "Nguồn ghi nhớ chống mất thông tin khi context bị compact. Mọi lượt làm việc phải đọc file này trước và cập nhật sau."
 ---
 
@@ -20,7 +20,9 @@ purpose: "Nguồn ghi nhớ chống mất thông tin khi context bị compact. M
 
 ## 1. Hiện trạng repository
 
-Cập nhật 2026-10-11 lượt 51. **Mục này phải được làm mới mỗi lượt.**
+Cập nhật 2026-10-11 lượt 52. **Mục này phải được làm mới mỗi lượt.**
+
+**Đối chiếu lượt 52 (tự đo):** đầu lượt HEAD `665a6c3`, `main`, **118 commit**, `git status --porcelain --untracked-files=all` **exit 0 / 0 dòng**, **không remote cấu hình**. Lát này **chỉ** sửa hai file proposal; `src/`, `tests/`, `docs/spec.md` và acceptance criteria **không đổi**. Bốn kiểm tra code vẫn chạy và vẫn xanh.
 
 **Đối chiếu lượt 51 (tự đo, không nhận báo cáo trước):** HEAD `bee9dc6`, `main`, **115 commit**, `git status --porcelain --untracked-files=all` **exit 0 / 0 dòng**, **không remote cấu hình**. Xác minh **từ GitHub**: `refs/heads/main` = `88d32ab`, đúng một ref, **2 commit**, chỉ danh tính `Claude <noreply@anthropic.com>`, `main` **không** phải ancestor (`merge-base --is-ancestor` exit 1), **0 commit trùng SHA** giữa hai lịch sử, **152 file**. **Đính chính câu của lượt 50:** tree công khai `d40f8c7` **không còn** khớp tree của `main` — `bee9dc6` sửa `PROJECT_STATE.md` sau khi snapshot được dựng, nên bản công khai lệch **đúng 1 file tài liệu** (`git diff 88d32ab main` → 1 file, 56+/3-), **0 file code**.
 
@@ -35,6 +37,7 @@ Cập nhật 2026-10-11 lượt 51. **Mục này phải được làm mới mỗ
 | Ranh giới quyền hạn | **Lượt 14:** `authority.py` tách tầng subject-free thành `_BARE_PERFORMATIVE` (16 pattern, **không bao giờ** nới được) và `_BARE_REPORTABLE` (4 pattern, trần chỉ được giảm). Thêm `_ASPECT` (slot marker thời/thể) và `_ACTOR`. `test_authority_residual.py` giữ **2121 assertion** của ma trận trường. |
 | Response boundary | **Lượt 15: gate đã có caller.** Trước đó không module nào trong `src/` gọi `evaluate_response`, nên 'mọi output qua gate' là một câu chữ. `boundary.deliver` chạy answerability → authority → sink, và `sink.emit` xuất hiện **đúng một lần** trong toàn `src/` (test AST). `DeliveryOutcome` **không có field text**. **Boundary nội bộ, KHÔNG phải tích hợp production** — `RecordingSink` tới bộ nhớ. |
 | Đường CPU / cấp B | Năm quyết định S2.1 đã triển khai theo uỷ quyền. Cấp B vẫn bị chặn riêng bởi RAM LLM, RAM ASR, digest chưa ghim và egress OS chưa attested. Không chạy model. **Lượt 51: trạng thái bốn cổng nay ĐỌC ĐƯỢC BẰNG LỆNH** — `uv run python -m benchmarks.readiness` (đo: **exit 3, 4/4 cổng mở**), đọc chính hằng số các cổng đọc nên không lệch được khỏi phép cưỡng chế. Lệnh **chỉ đọc** và **không** phải phép chạy (`is_permission_to_run: false`). |
+| Proposal | **Lượt 52: viết lại, 357 -> 1 768 dòng, PDF 9 -> 46 trang.** 13 chương A-M + mục lục; mọi phát biểu năng lực mang nhãn; **không** phần trăm tiến độ, **không** ngày lịch, **không** SLA/chi phí/throughput. **QA trực quan đủ 46/46 trang trên ảnh của chính PDF** (Chrome rasterise; trước đây chỉ QA được trên HTML vì máy không có poppler). Quét rò rỉ **có giải nén PDF**: 0 hit trên 9 nhóm mẫu. |
 | Thử nghiệm cục bộ | [CHỐT] Cấp A trước, chuẩn bị B song song, chưa chạy model. Runbook chọn phương án A cho RAM: giữ fail-closed. Hai ngưỡng RAM vẫn `None`; mọi model runner tiếp tục bị từ chối. |
 | Dry-run cấp 2 | **Lượt 19: câu hỏi điều khiển việc chọn card.** `meetai dry-run` 12 case qua `retrieval` → `deliver` → `RecordingSink`. Report tự khai cấp độ **bằng dữ liệu**: `is_production_integration=False`, `is_discord_test=False`. |
 | Retrieval | **Lượt 19:** hai tập giữ riêng bằng kiểu - `candidates` (xếp hạng, cắt được) cho model dẫn, `witnesses` (**không bao giờ cắt**) cho verifier. `scope` và `max_sensitivity` **bắt buộc**, không default. **Lượt 20:** chuẩn bị quyết định scope, **không cài** gì phụ thuộc vào nó. |
@@ -70,6 +73,8 @@ Cập nhật 2026-10-11 lượt 51. **Mục này phải được làm mới mỗ
 ---
 
 ## 2. Khoảng cách so với hồ sơ bàn giao
+
+**Hiện trạng lượt 52:** Không khoảng cách nào so với hồ sơ bàn giao được đóng hay mở trong lượt này — đây là lát **tài liệu**. Proposal nay mô tả đầy đủ khoảng cách đó ở một chỗ: 6/12 khối của kiến trúc mục tiêu **chưa tồn tại**, bốn cổng cấp B **còn mở**, bốn cổng cấp C **còn mở**, và ba thành phần (nhận âm thanh vào, nhận dạng tiếng nói, suy luận) **vẫn phải được xây** kể cả khi mọi cổng đóng.
 
 **Hiện trạng lượt 51:** Cấp A có bằng chứng mới của lượt này (`status` exit 0; `dry-run` exit 0, md5 trùng 3/3) và **không** đổi trạng thái — nó vẫn không chứng minh gì về chất lượng model, ASR tiếng Việt hay dùng được trong họp thật. Cấp B: bốn cổng **vẫn mở**, nay đọc được bằng lệnh thay vì chỉ bằng văn xuôi; **không** điều kiện nào được đáp ứng thêm, phần chuẩn bị là **khả năng quan sát**, không phải phép chạy. Cấp C: `0-S`/`0-P`/`0-C`/`0-U` **giữ nguyên mở**, không dự báo ngày.
 
@@ -246,6 +251,12 @@ Ghi chú vòng 18: Social SDK `UserAudioReceivedCallback` là voice call trong S
 
 **Đã chuyển sang [docs/plan.md](docs/plan.md).**
 
+**Quyết định vận hành hiện tại (lượt 52):** không đổi so với lượt 51. Lát lượt 52 là
+**tài liệu**: nó không mở cổng nào, không đặt giá trị nào, và không đổi một dòng mã
+nào trong `src/` hay `tests/`.
+
+*(Ghi chú lượt 51, giữ làm lịch sử:)*
+
 **Quyết định vận hành hiện tại (lượt 51):** giữ lựa chọn A, không chạy model và không
 đặt ngưỡng RAM bằng suy đoán. Lát lượt 51 làm trạng thái bốn cổng cấp B **đọc được
 bằng lệnh** (`python -m benchmarks.readiness`, exit 3, 4/4 mở) mà **không** mở cổng
@@ -332,6 +343,98 @@ sát được**, vì không code nào gọi hàm đó và không sink nào tồn
 ---
 
 ## 7. Nhật ký lượt làm việc
+
+### 2026-10-11 - Lượt 52 (viết lại proposal: 9 trang -> 46 trang, QA trực quan đủ mọi trang)
+
+**Không chạy model/GPU/benchmark/audio/Discord, không tải dữ liệu hay dependency,
+không đổi egress/firewall/consent, không sửa `src/`, `tests/`, `spec` hay acceptance
+criteria.** Mọi gate giữ **fail-closed**. Lát này **chỉ** chạm hai file proposal.
+
+- **[ĐÃ XÁC MINH] Git đầu lượt.** HEAD `665a6c3`, `main`, **118 commit**;
+  `git status --porcelain --untracked-files=all` **exit 0, 0 dòng**; **không remote
+  cấu hình**. Lỗi worktree của phiên Codex **không tái lập** (lần thứ tám).
+
+- **Viết lại hoàn toàn `docs/proposal/meetai-de-xuat-du-an.vi.md`:** 357 dòng ->
+  **1 768 dòng** (141 852 byte). Bố cục lấy cảm hứng từ một outline mẫu do Sơn chỉ
+  tới — giữ **đặc điểm bố cục** (thông tin dự án, mô tả, mục tiêu, kỹ năng, gói công
+  việc, kết quả bàn giao, tiêu chí đánh giá) và **mở rộng thành 13 chương A-M** kèm
+  mục lục. **Không chép** logo, tên trường, chữ ký hay nhận diện của tài liệu mẫu;
+  tài liệu mẫu **không bị sửa** (đã kiểm mtime).
+
+- **[ĐÃ ĐO] Mọi số trong proposal đối chiếu lại từ nguồn, không lấy từ nhật ký cũ:**
+  154 file tracked · `src/meetai/` **23 + 3** module · `benchmarks/` **20** module ·
+  **10 722 / 26 195** dòng mã lõi/kiểm thử · **50** file test · `pytest -q` **5 271
+  passed, 3 skipped** · `docs/spec.md` **72 dòng nghĩa vụ, 58 `tested`** · **7** ADR ·
+  **20** ghi chú nghiên cứu · phiên bản dependency đọc thẳng từ `pyproject.toml` +
+  tệp lock.
+
+- **[ĐÃ ĐO] Cấp A chạy lại trong lượt này:** `meetai status` exit 0; `meetai dry-run`
+  exit 0, 12 tình huống / 1 được nói; **md5 trùng khít 3/3**
+  (`bb6b44b1f53036afb4b1d114d785b865`). `python -m benchmarks.readiness` **exit 3,
+  4/4 cổng mở**.
+
+- **Nhãn bắt buộc dùng suốt tài liệu:** `[ĐÃ TRIỂN KHAI]` · `[ĐÃ ĐO]` · `[ĐỀ XUẤT]` ·
+  `[GIẢ ĐỊNH]` · `[CHỜ BẰNG CHỨNG]` · `[CHỜ SƠN]`. **Không** phần trăm tiến độ tổng,
+  **không** ngày lịch cho mốc nào, **không** SLA, **không** con số chi phí tháng,
+  **không** throughput/quy mô người dùng/số phiên đồng thời, **không** cấu hình phần
+  cứng tối thiểu (ghi `[CHỜ BẰNG CHỨNG]`). Mốc tách **khối lượng công việc** khỏi
+  **thời gian chờ quyết định** thành hai cột riêng.
+
+- **Hai sơ đồ kiến trúc vẽ KHÁC NHAU có chủ ý** — hiện tại (bản ghi) so với mục tiêu
+  (mọi khối chưa có đánh dấu `⟦CHƯA CÓ⟧`), để không ai đọc sơ đồ mục tiêu thành mô tả
+  hiện trạng.
+
+- **[ĐÃ ĐO] Build PDF:** pandoc 3.10 -> HTML tự chứa -> headless Chrome `--print-to-pdf`.
+  CSS **chỉ font cục bộ**, build **không gọi mạng**. Kết quả **46 trang**,
+  1 518 098 byte, header `%PDF-1.4`, trailer `%%EOF` hợp lệ.
+
+- **[ĐÃ ĐO] Sửa một lỗi bố cục do chính phép QA tìm ra.** Bản dựng đầu đặt
+  `break-before: page` cho **mỗi** chương: ra **51 trang** trong đó nhiều trang gần
+  như trống (trang 3 chỉ có một tiểu mục ngắn). Bỏ ngắt trang theo chương, giữ
+  `break-after: avoid` để tiêu đề không bị mồ côi -> **46 trang**, không còn trang
+  nửa trống do chương.
+
+- **[ĐÃ ĐO] Anchor nội bộ:** 26 anchor của mục lục **đều hỏng** ở bản dựng đầu, vì
+  pandoc sinh id khác cách viết tay (`0.` bị cắt, `A.` giữ dấu chấm). Đã gắn id
+  tường minh `{#...}` cho 26 tiêu đề. Đo lại trên HTML: **31 link nội bộ / 123 id,
+  0 hỏng**. *(5 "link hỏng" lúc đầu là anchor tự trỏ của chính pandoc trong code
+  block — không phải lỗi.)*
+
+- **[ĐÃ LÀM] QA trực quan ĐỦ 46/46 TRANG**, rasterise bằng trình xem PDF của Chrome
+  qua DevTools. **Đây là lần đầu QA chạy trên ảnh của chính PDF**, không phải trên
+  HTML — lượt 35 ghi rõ giới hạn đó vì máy không có poppler; nay vòng qua được bằng
+  Chrome. Kết quả: **0 glyph thiếu** (dấu tiếng Việt đủ ở mọi trang) · **0 chữ tràn
+  hay bị cắt** · **5 sơ đồ ASCII nguyên vẹn**, không xuống dòng sai · **header bảng
+  lặp đúng** qua ngắt trang · code block có tô màu cú pháp · emoji trạng thái hiện
+  màu. **Phần dư ghi rõ, không che:** hai bảng dày nhất là **§E.4 (7 cột, tr.17)** và
+  **§I.7 (8 cột, tr.34-35)** — **đọc được, không vỡ, không cắt chữ**, nhưng xuống
+  dòng nhiều; và **tr.10, 11, 46** còn nhiều khoảng trắng vì `break-inside: avoid`
+  giữ sơ đồ ASCII nguyên khối, đó là đánh đổi **cố ý** (sơ đồ bị cắt đôi còn tệ hơn).
+
+- **[ĐÃ ĐO] Quét rò rỉ, và lần này GIẢI NÉN PDF.** Lượt 50/51 phải ghi giới hạn *"PDF
+  là binary nén nên phép quét byte yếu hơn"*; lượt này giải nén **2 852 651 byte**
+  text layer rồi quét. Kết quả trên **cả** `.md` **và** text layer của `.pdf`:
+  **0** tên gọi chủ dự án · **0** username Windows · **0** mảnh email · **0** địa chỉ
+  email bất kỳ · **0** đường dẫn ổ đĩa · **0** giá trị canary · **0** chuỗi dạng
+  token · **0** nhận diện của tài liệu mẫu. Chủ dự án được gọi bằng **vai trò**.
+
+- **Nguồn:** 11 nguồn chính thức, mỗi nguồn ghi **URL + ngày truy cập + kết luận nó
+  đỡ**, và nói rõ tài liệu **không tự đi đọc lại** trong lượt viết — dùng ngày truy
+  cập **đã được lưu**. Ghi rõ **bản tóm tắt của công cụ tìm kiếm không được dùng để
+  đóng một cổng bằng chứng**.
+
+- **[ĐÃ ĐO] Kiểm tra đã chạy, exit code thật:** `pandoc` exit 0 · Chrome
+  `--print-to-pdf` exit 0 · `pytest -q` **5 271 passed, 3 skipped**, exit 0 ·
+  `ruff format --check .` 147 files, exit 0 · `ruff check .` All checks passed!,
+  exit 0 · `mypy` 87 source files, exit 0. *(Bốn kiểm tra code chạy để chứng minh lát
+  tài liệu **không** làm hỏng gì, không phải vì có mã mới.)*
+
+- **[CHỜ SƠN] Không đụng gì:** Consent TTL/mode, late-join, persistence/retention,
+  privacy wording, 16 nhãn eval, hai ngưỡng RAM, scope câu hỏi họp, permit media
+  sink, `model.path`/`derived_from`, tạo app/bot Discord, dừng tiến trình mồ côi,
+  chính sách ghi đè generator, tên/alias cho MeetAI, công khai tên gọi chủ dự án.
+  **Proposal ghi cả 13 mục đó thành một bảng quyết định có cột *"có thể chuẩn bị gì
+  mà không quyết thay"*.**
 
 ### 2026-10-11 - Lượt 51 (báo cáo readiness chỉ đọc; xác minh snapshot công khai)
 
