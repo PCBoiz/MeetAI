@@ -73,6 +73,50 @@ permissive khỏi nhánh non-commercial.
 
 ---
 
+### 1.2 Khi chủ kênh là đối tác — xin gì, và vì sao xin thứ đó
+
+**[CHỐT] Sơn 2026-10-29:** chủ dự án của playlist là **đối tác của Sơn**. Điều đó
+giải quyết **bản quyền bản ghi**. Nó **không** chạm tới điều khoản YouTube (vốn đòi
+phép của **YouTube *và*** chủ sở hữu quyền) — nhưng điều đó thành **vô nghĩa**, vì
+chủ kênh có đường xuất **chính thức**, và đường đó cho **chất lượng cao hơn**.
+
+**Xin theo đúng thứ tự này:**
+
+1. **File ghi gốc** — thứ tốt nhất. Chưa qua nén lần hai.
+2. **Google Takeout** — nếu không còn file gốc.
+3. **YouTube Studio → Download** — cuối cùng, vì 720p/360p nghĩa là **audio đã
+   được mã hoá lại**.
+
+**Và xin kèm một dòng xác nhận bằng văn bản** rằng đối tác đồng ý cho dùng vào mục
+đích này. Đó **không** phải thủ tục thừa: nó biến *"đối tác nói là được"* thành
+**bằng chứng**, đúng mô hình `(phiên, người, phạm vi, phiên bản thông báo)` dự án đã
+dùng cho consent — và là thứ một người đọc lại sau sáu tháng cần thấy.
+
+**[CHỜ SƠN] Câu còn lại:** chủ kênh giữ bản quyền **bản ghi**, nhưng **không thay
+mặt được từng giọng nói trong phòng**. Nếu trong các buổi họp đó có **người thứ ba**
+nói ngoài Sơn, cộng tác viên đã đồng thuận và đối tác, thì đồng thuận cần phủ cả họ.
+
+### 1.3 Kiểm gì NGAY khi file về — trước khi gán nhãn một phút nào
+
+Năm phép kiểm này rẻ và chạy trước mọi thứ khác, vì mỗi cái có thể làm hỏng toàn bộ
+công gán nhãn phía sau:
+
+| # | Kiểm | Vì sao | Hỏng thì sao |
+|---|---|---|---|
+| 1 | **codec / sample rate / số kênh / bitrate** của mỗi file | Phân biệt nguồn **gốc** với bản **đã transcode** | Ghi vào `audio_provenance`; nếu trộn nguồn thì **tách số** |
+| 2 | **Tỷ lệ speech / tổng thời lượng** | Thay **[GIẢ ĐỊNH] 50–65%** ở §2.5 bằng số thật | Đổi hẳn số giờ cần thu |
+| 3 | **Độ dài lượt thoại** (p50/p95) | Neo cỡ mẫu ở §2 là FLEURS **11,9 s/phát ngôn** | Lượt họp ngắn hơn ⇒ bảng §2 phải tính lại |
+| 4 | **Tỷ lệ nói chồng** | §4.1 giả định 5–15% | Dưới 5% thì trục nói chồng **chưa đủ mẫu**, phải nói trước chứ không phát hiện sau |
+| 5 | **Có mấy người nói** trong mỗi file | Quyết định đồng thuận có đủ phủ không | Có giọng thứ tư ⇒ **dừng**, hỏi trước khi gán nhãn |
+
+**Không phép kiểm nào cần model, GPU, hay mở cổng** — chỉ đọc header và đo năng
+lượng/khoảng lặng. Đó là lý do chúng chạy **trước**.
+
+**Và dừng ở lô ~30 phút** (§7): lô đó vừa đủ cho **cái cân so theo cặp**, vừa trả lời
+ba **[GIẢ ĐỊNH]** trên bằng số thật — **trước khi** Sơn bỏ 6–12 giờ công gán nhãn.
+
+---
+
 ## 2. Cần bao nhiêu audio — tính ra, không đoán
 
 **[ĐÃ ĐO] Neo trên chính artifact của repo**

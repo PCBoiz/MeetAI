@@ -146,3 +146,10 @@ out/
 # out of the published tree. No file of the package itself was ever copied
 # here; this ignores only the note written about it.
 docs/research/*-tham-khao-zac.md
+
+# MeetAI: per-machine Claude Code permission rules. Local by definition, and it
+# names a push target - this repository is published as a public snapshot, so a
+# settings file that reaches the tracked tree reaches the public tree with it.
+# .claude/settings.json is NOT ignored: that one is meant to be shared, and
+# anything put there is published on purpose.
+.claude/settings.local.json

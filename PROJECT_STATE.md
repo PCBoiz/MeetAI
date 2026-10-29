@@ -2,7 +2,7 @@
 title: "MeetAI - Trạng thái dự án (sổ ghi bền vững)"
 owner: "Sơn"
 created: "2026-10-07"
-last_updated: "2026-10-29 (lượt 55)"
+last_updated: "2026-10-29 (lượt 56)"
 purpose: "Nguồn ghi nhớ chống mất thông tin khi context bị compact. Mọi lượt làm việc phải đọc file này trước và cập nhật sau."
 ---
 
@@ -20,7 +20,9 @@ purpose: "Nguồn ghi nhớ chống mất thông tin khi context bị compact. M
 
 ## 1. Hiện trạng repository
 
-Cập nhật 2026-10-29 lượt 55. **Mục này phải được làm mới mỗi lượt.**
+Cập nhật 2026-10-29 lượt 56. **Mục này phải được làm mới mỗi lượt.**
+
+**Đối chiếu lượt 56:** HEAD `d2185d4`, `main`, **125 commit**, `git status --porcelain --untracked-files=all` **exit 0 / 0 dòng**. Bản công khai `fe571ce`, tree khớp tuyệt đối tree của `main`. Lượt này **chỉ sửa tài liệu**.
 
 **Đối chiếu lượt 55:** HEAD `cea5be1`, `main`, **122 commit**, `git status --porcelain --untracked-files=all` **exit 0 / 0 dòng**. Lát **test-only + đính chính spec**: không thêm producer, không mở cổng, không đổi acceptance criteria, không đổi nhãn eval, `src/` **không đổi**.
 
@@ -349,6 +351,53 @@ sát được**, vì không code nào gọi hàm đó và không sink nào tồn
 ---
 
 ## 7. Nhật ký lượt làm việc
+
+### 2026-10-29 - Lượt 56 (audio: một đường mở ra, một đường đóng lại)
+
+**Chỉ sửa tài liệu.** Không chạy model, không tải audio, không thêm dependency,
+không mở cổng. `src/`, `tests/`, `docs/spec.md` **không đổi**.
+
+- **Sơn đề nghị lấy tạm audio từ (a) gói dữ liệu bên thứ ba và (b) playlist YouTube,
+  vì "chủ dự án bên đấy là đối tác của tôi".** Hai việc khác hẳn nhau; trả lời tách
+  bạch.
+
+- **(a) Audio của gói bên thứ ba: KHÔNG dùng — và lý do chính là KỸ THUẬT, không
+  phải giấy phép.** **[ĐÃ ĐO]** 16 kHz mono, p50 **3,44 s**, max **15,69 s**, **một
+  phát ngôn / một người / một yêu cầu**: đó là **corpus lệnh thoại**, không phải
+  cuộc họp. Bộ eval họp cần **dài, nhiều người, có nói chồng** — audio đó **không
+  đóng được một trục nào** trong các trục B-1 đang mở. Và nếu chỉ cần *"audio tiếng
+  Việt để chạy thử"* thì **repo đã có sẵn**: `var/asr/` **385 MB / 505 file .wav**,
+  gồm **FLEURS vi_vn dev 361 clip, CC-BY-4.0, nhánh permissive**, đã đo SyER
+  **23,47%**. Nên gói kia **không thêm được gì** mà ta chưa có với giấy phép sạch
+  hơn. *(Về giấy phép: quan hệ đối tác với chủ playlist **không chạm tới** gói đó —
+  hạn chế đến từ **ban tổ chức cuộc thi**; và bản cấp ghi "trong khuôn khổ" cuộc thi
+  đó, dùng cho MeetAI là ngoài khuôn khổ. Dùng audio của nó cũng đi ngược chính
+  **[CHỐT]** lượt 55 của Sơn.)*
+
+- **(b) Audio YouTube: CÓ — và quan hệ đối tác mở ra đường TỐT HƠN việc tải.**
+  Đối tác là chủ kênh ⇒ giải quyết **bản quyền bản ghi**. Thứ nó không chạm tới là
+  điều khoản YouTube (đòi phép của **YouTube *và*** chủ sở hữu quyền) — nhưng điều
+  đó thành **vô nghĩa**, vì chủ kênh có đường xuất **chính thức** và đường đó cho
+  **chất lượng cao hơn**. Thứ tự xin: **file ghi gốc** > **Google Takeout** >
+  **Studio 720p/360p** (bản cuối đã **mã hoá lại audio**). Kèm **một dòng xác nhận
+  bằng văn bản** — biến *"đối tác nói là được"* thành **bằng chứng**, đúng mô hình
+  `(phiên, người, phạm vi, phiên bản thông báo)`.
+
+- **[CHỜ SƠN] Câu chưa ai trả lời:** chủ kênh giữ bản quyền **bản ghi**, nhưng
+  **không thay mặt được từng giọng nói trong phòng**. Nếu trong các buổi họp có
+  **người thứ ba** nói ngoài Sơn, cộng tác viên đã đồng thuận và đối tác, đồng thuận
+  cần phủ cả họ. Hỏi **không phải để cản** — để khi có số đo thì nó đứng vững được.
+
+- **Đã viết vào ghi chú D2 hai mục mới:** §1.2 *xin gì và vì sao xin thứ đó* (kèm
+  thứ tự nguồn và lý do xin xác nhận văn bản) và §1.3 **năm phép kiểm chạy NGAY khi
+  file về, trước khi gán nhãn một phút nào** — codec/sample rate/kênh/bitrate ·
+  **tỷ lệ speech/giờ** (thay `[GIẢ ĐỊNH]` 50–65%) · **độ dài lượt thoại** (neo cỡ
+  mẫu là FLEURS 11,9 s/phát ngôn) · **tỷ lệ nói chồng** (§4.1 giả định 5–15%) ·
+  **số người nói mỗi file** (quyết định đồng thuận có đủ phủ không). **Không phép
+  kiểm nào cần model, GPU hay mở cổng** — chỉ đọc header và đo khoảng lặng; đó là lý
+  do chúng chạy **trước**.
+
+- **[CHỜ SƠN] Không đụng gì khác.** Danh sách chờ không đổi.
 
 ### 2026-10-29 - Lượt 55 (khảo sát D3 -> không làm; ghim thứ khảo sát tìm ra)
 
