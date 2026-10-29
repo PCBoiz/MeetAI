@@ -36,7 +36,7 @@ Cập nhật 2026-10-29 lượt 55. **Mục này phải được làm mới mỗ
 
 | Hạng mục | Thực tế |
 |---|---|
-| Git | Repo local `D:/MeetAI`, branch `main`, **114 commit** tính đến `c3b1c3f`. **Bản công khai: `PCBoiz/MeetAI` `refs/heads/main` = `41d4aac`** (lượt 51; **3 commit**, tree `d193427` khớp tree của `main`, 154 file, `main` **không** phải ancestor) *(lượt 50 là `88d32ab`)* — snapshot làm mới ở lượt 50: **2 commit**, chỉ danh tính `Claude <noreply@anthropic.com>`, **tree khớp tuyệt đối** tree của `main`, và **`main` KHÔNG phải ancestor**, nên email cá nhân trong metadata commit **không** được công khai. Đẩy dạng **fast-forward**, không force. *(Ghi chú cũ, giữ làm lịch sử:)* **105 commit sau lát 42**. Lượt 41 commit là `6bc2b7c`; lát 42 đã commit, xem `git log -1` để lấy SHA. Tree sạch; remote chưa được xác minh độc lập. |
+| Git | Repo local `D:/MeetAI`, branch `main`. **Bản công khai: `PCBoiz/MeetAI` `refs/heads/main` = `f19170b`** — lượt 55: **6 commit**, tree `5972884` **khớp tuyệt đối** tree của `main` (diff 0 file), **155 file**, chỉ danh tính `Claude <noreply@anthropic.com>`, `main` **không** phải ancestor, **0 commit trùng SHA**. **0** marker của gói dữ liệu bên thứ ba trong blob đã công khai. Đẩy **fast-forward**, không force. *(Ghi chú cũ, giữ làm lịch sử:)* **114 commit** tính đến `c3b1c3f`; bản công khai từng là `41d4aac` (lượt 51; **3 commit**, tree `d193427` khớp tree của `main`, 154 file, `main` **không** phải ancestor) *(lượt 50 là `88d32ab`)* — snapshot làm mới ở lượt 50: **2 commit**, chỉ danh tính `Claude <noreply@anthropic.com>`, **tree khớp tuyệt đối** tree của `main`, và **`main` KHÔNG phải ancestor**, nên email cá nhân trong metadata commit **không** được công khai. Đẩy dạng **fast-forward**, không force. *(Ghi chú cũ, giữ làm lịch sử:)* **105 commit sau lát 42**. Lượt 41 commit là `6bc2b7c`; lát 42 đã commit, xem `git log -1` để lấy SHA. Tree sạch; remote chưa được xác minh độc lập. |
 | Code | `src/meetai/` **22 module** + `__init__.py` + `adapters/{base,fake}.py` (đếm bằng `ls`; lượt 18 ghi "20" là lệch). Lượt 19 thêm `retrieval.py` - bước 4 pipeline, framework-free, **metadata + lexical, không embedding** (spec `K-8` cố ý `absent`). |
 | Benchmark | `benchmarks/` **20 module** (lượt 51 thêm `readiness.py`; trước đó **19**) (lượt 32 thêm `winmem.py`, lượt 35 thêm `artifacts.py`) (đếm bằng `glob('*.py')`; ô này từng ghi "15" và đã lệch — lượt 25 đo được **16**, lượt 26 thêm `refusals.py`). **Lượt 26:** `refusals.py` giữ allowlist 10 `ARTIFACT_ROLES` và `missing_artifact()`; mọi nhánh từ chối sớm in **role**, không in đường dẫn. **Lượt 27 đếm lại từ AST: sáu CLI có 16 kiểm tra artifact** (3/5/2/1/2/3) — lượt 26 ghi "7 nhánh" là **trộn đơn vị** (7 là số *ca test*). Nay **16/16 nhánh có ca cô lập** và **10/10 role** được chạm, khẳng định bằng ma trận so với AST. Lượt 13 thêm `policy_scoring.py` (scorer tất định, pure, test không cần model), `bench_llm_policy.py` (harness S2.3), `rescore_llm_policy.py` (chấm lại từ generation đã lưu, không chạy lại model). **Không** vào `pyproject.toml`. |
 | Test | **Lượt 42:** full suite bằng `.venv\Scripts\python.exe -m pytest -q` → **5183 passed, 3 skipped, 1 warning**, exit 0. Test mục tiêu `tests/test_benchmark_artifacts.py` → **30 passed**. Ruff format → **145 files**, Ruff lint xanh, mypy → **86 source files**; cả bốn kiểm tra exit 0. Cảnh báo là `StarletteDeprecationWarning` về httpx. `uv run` lần này trả Access denied; không dùng nó để báo kết quả. |
@@ -409,6 +409,36 @@ không mở cổng, không đổi acceptance criteria hay nhãn eval. `src/` **k
   87 source files, exit 0. *(Hai lần sửa giữa chừng: `vars()` hỏng vì
   `AuthorityVerdict` là slots dataclass → dùng `dataclasses.fields()`; và mypy bắt
   `AddressContext` phải import từ `meetai.response`, nơi nó **được định nghĩa**.)*
+
+- **[CHỐT] Sơn 2026-10-29 — phần phân tích gói dữ liệu bên thứ ba: CỤC BỘ, KHÔNG
+  PUSH, vào `.gitignore`.** Phép rà trước khi xuất bản **đã chặn** lần push: cây
+  mang một ghi chú 245 dòng phân tích một gói có **giới hạn chia sẻ** (chỉ cấp cho
+  bên đã đăng ký, cấm phát tán) của một cuộc thi **có vẻ đang diễn ra**. Ghi chú đó
+  **không** chứa audio/mẫu/file catalog — chỉ bình luận thiết kế + thống kê tổng
+  hợp — nhưng **có được công bố hay không là quyết định của Sơn, không phải của
+  tôi**, nên tôi **dừng và hỏi** thay vì tự quyết.
+
+  **Đã làm:** ghi chú **untracked + gitignore theo tên**, vẫn nằm trên đĩa để dùng
+  cục bộ. Mọi chuỗi dẫn xuất từ gói đó **ra khỏi cây được theo dõi** — xác minh bằng
+  cách quét **cả 155 file tracked** với **11 marker**: **0 hit** — gồm các con số đã
+  lọt vào `PROJECT_STATE` và `plan.md`, và một link trong ghi chú D2 lẽ ra sẽ treo.
+  Thứ giữ lại là kết luận **của MeetAI** (dữ liệu không dùng được; phân loại khả năng
+  theo **tác động** đọc/ghi là trục sẽ cần bên cạnh trục loại phát ngôn), ghi là
+  **vắng mặt có chủ đích** để người sau không khôi phục chi tiết.
+
+  **Không viết lại lịch sử** (`AGENTS.md` cấm), nên ghi chú vẫn nằm trong commit cục
+  bộ — và điều đó **không** tới repo công khai, vì snapshot dựng bằng `commit-tree`
+  từ **tree** của `main` và **không mang commit nào** của `main`; đúng tính chất giữ
+  email cá nhân trong metadata `main` không bị công khai.
+
+- **[ĐÃ ĐO] Đã xuất bản, xác minh từ remote.** `refs/heads/main` = **`f19170b`**
+  (`133b45f..f19170b`, **fast-forward**, không force, không token trong URL).
+  Đo lại sau fetch: tree `5972884` **khớp tuyệt đối** tree của `main` (**diff 0
+  file**), **6 commit**, đúng **một** danh tính `Claude <noreply@anthropic.com>`,
+  `main` **không** phải ancestor, **0 commit trùng SHA**, **155 file**, và **0**
+  marker của gói kia trong blob đã công khai. Audit trước push: PDF **được giải
+  nén**; 0 hit trên 8 pattern credential + tên/mảnh email của Sơn; username duy nhất
+  trong path là canary tổng hợp.
 
 - **[CHỜ SƠN] Không đụng gì.** Danh sách chờ không đổi.
 
