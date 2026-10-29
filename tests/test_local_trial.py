@@ -67,23 +67,49 @@ def _run(
     return code, captured.out, captured.err
 
 
-def _snapshot() -> dict[str, tuple[int, int]]:
-    """Path -> (size, mtime_ns) for the whole repository.
+def _snapshot(root: pathlib.Path = REPO_ROOT) -> dict[str, tuple[int, int] | None]:
+    """Path -> (size, mtime_ns) for a file, ``None`` for a directory.
 
     ``__pycache__`` is excluded because bytecode is not data: a cold first run
     legitimately writes it. Everything else is included, ``var/`` and
     ``models/`` among them, because those are exactly where a stray artifact
     would land.
+
+    **Directories are recorded by presence only, and that is measured rather
+    than assumed.** Earlier this function stored ``(size, mtime_ns)`` for
+    directories too, and the tree assertion then failed intermittently - but
+    only ever on directory entries, never once on a file, and on a *different*
+    set each time (``var/asr/noise`` and ``var/asr/results`` one run,
+    ``var/asr/noise`` alone the next). A write would hit the same path every
+    time. Snapshotting ``var/`` either side of a whole suite run showed 0
+    created, 0 removed, and exactly one changed file - a report an eval
+    harness writes on purpose - while those directories were untouched, their
+    mtimes three weeks old.
+
+    So the stat fields of a directory entry move here for reasons unrelated to
+    whether the commands under test wrote anything. Keeping them cost false
+    alarms and bought nothing: a file appearing inside a directory shows up in
+    ``created``, one vanishing in ``removed``, one being rewritten in
+    ``changed``. The one thing presence-only must not lose is an **empty**
+    directory being created, and it does not - the key is still there, so
+    ``created`` catches it. ``TestTheSnapshotStillCatchesEveryWrite`` pins all
+    five of those, plus the noise case, against a temporary tree.
+
+    A false alarm here is not free: this is the assertion that proves level A
+    leaves the disk alone, and a check that cries wolf is one people learn to
+    skip - the same argument ``benchmarks/preflight.py`` makes about a
+    preflight that always refuses.
     """
-    out: dict[str, tuple[int, int]] = {}
-    for path in REPO_ROOT.rglob("*"):
+    out: dict[str, tuple[int, int] | None] = {}
+    for path in root.rglob("*"):
         if any(part in _SNAPSHOT_SKIP for part in path.parts):
             continue
         try:
             stat = path.stat()
         except OSError:  # a file that vanished under us is not our write
             continue
-        out[str(path.relative_to(REPO_ROOT))] = (stat.st_size, stat.st_mtime_ns)
+        key = str(path.relative_to(root))
+        out[key] = None if path.is_dir() else (stat.st_size, stat.st_mtime_ns)
     return out
 
 
@@ -406,3 +432,89 @@ class TestTheRunWritesNothing:
         assert not created, f"created: {created}"
         assert not removed, f"removed: {removed}"
         assert not changed, f"changed: {changed}"
+
+
+class TestTheSnapshotStillCatchesEveryWrite:
+    """``_snapshot`` records directories by presence only. Prove nothing was lost.
+
+    Each case drives the same three-set comparison the tree assertion uses,
+    against a temporary tree rather than the repository, and asserts that a
+    real write still lands in one of the sets. The last case is the control:
+    the noise that made the assertion flaky must now be silent, and it has to
+    be *the only* thing that is.
+    """
+
+    @staticmethod
+    def _diff(
+        before: dict[str, tuple[int, int] | None],
+        after: dict[str, tuple[int, int] | None],
+    ) -> tuple[list[str], list[str], list[str]]:
+        """The comparison under test, lifted verbatim from the tree assertion."""
+        created = sorted(set(after) - set(before))
+        removed = sorted(set(before) - set(after))
+        changed = sorted(
+            key for key in set(before) & set(after) if before[key] != after[key]
+        )
+        return created, removed, changed
+
+    @pytest.fixture
+    def tree(self, tmp_path: pathlib.Path) -> pathlib.Path:
+        (tmp_path / "sub").mkdir()
+        (tmp_path / "sub" / "kept.txt").write_text("abc", encoding="utf-8")
+        return tmp_path
+
+    def test_a_file_created_inside_a_directory_is_caught(
+        self, tree: pathlib.Path
+    ) -> None:
+        before = _snapshot(tree)
+        (tree / "sub" / "new.txt").write_text("x", encoding="utf-8")
+        created, _removed, _changed = self._diff(before, _snapshot(tree))
+        assert created == [str(pathlib.Path("sub") / "new.txt")]
+
+    def test_a_file_removed_is_caught(self, tree: pathlib.Path) -> None:
+        before = _snapshot(tree)
+        (tree / "sub" / "kept.txt").unlink()
+        _created, removed, _changed = self._diff(before, _snapshot(tree))
+        assert removed == [str(pathlib.Path("sub") / "kept.txt")]
+
+    def test_a_rewrite_of_the_same_length_is_caught(self, tree: pathlib.Path) -> None:
+        """The subtle one: size is unchanged, so only mtime carries it."""
+        target = tree / "sub" / "kept.txt"
+        before = _snapshot(tree)
+        os.utime(target, ns=(0, 0))  # force a distinct mtime on a fast filesystem
+        target.write_text("xyz", encoding="utf-8")
+        assert target.stat().st_size == 3, "the control needs an equal-length rewrite"
+        _created, _removed, changed = self._diff(before, _snapshot(tree))
+        assert changed == [str(pathlib.Path("sub") / "kept.txt")]
+
+    def test_a_change_of_length_is_caught(self, tree: pathlib.Path) -> None:
+        before = _snapshot(tree)
+        (tree / "sub" / "kept.txt").write_text("much longer now", encoding="utf-8")
+        _created, _removed, changed = self._diff(before, _snapshot(tree))
+        assert changed == [str(pathlib.Path("sub") / "kept.txt")]
+
+    def test_an_empty_directory_created_is_still_caught(self, tree: pathlib.Path) -> None:
+        """Presence-only must not cost this: it is the one case that could regress.
+
+        A write path that calls ``mkdir`` and then fails before writing leaves
+        exactly this trace, and it is still a change to the tree.
+        """
+        before = _snapshot(tree)
+        (tree / "brand_new_dir").mkdir()
+        created, _removed, _changed = self._diff(before, _snapshot(tree))
+        assert created == ["brand_new_dir"]
+
+    def test_a_directory_whose_stat_moves_is_no_longer_an_alarm(
+        self, tree: pathlib.Path
+    ) -> None:
+        """The control for the fix itself.
+
+        Reproduces the observed noise directly - a directory's stat fields
+        move while its contents do not - and requires all three sets to stay
+        empty. Before the change this case put the directory in ``changed``,
+        which is what made the tree assertion fail intermittently.
+        """
+        before = _snapshot(tree)
+        os.utime(tree / "sub", ns=(1_000_000_000, 1_000_000_000))
+        created, removed, changed = self._diff(before, _snapshot(tree))
+        assert (created, removed, changed) == ([], [], [])

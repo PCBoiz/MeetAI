@@ -138,3 +138,11 @@ out/
 # not something to notice in review and git history does not forget.
 *.exe
 *.dll
+
+# MeetAI: analysis of a restricted third-party data package. [CHỐT] Sơn
+# 2026-10-29: local use only, never pushed. The package ships with a licence
+# limiting it to registered parties and forbidding redistribution, so the
+# commentary derived from it - design notes and aggregate statistics - stays
+# out of the published tree. No file of the package itself was ever copied
+# here; this ignores only the note written about it.
+docs/research/*-tham-khao-zac.md

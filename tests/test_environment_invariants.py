@@ -8,6 +8,7 @@ re-reads. They assert properties of the venv and of the code, so that a future
 from __future__ import annotations
 
 import ast
+import dataclasses
 import importlib.metadata
 import importlib.util
 import pathlib
@@ -921,3 +922,177 @@ class TestTheAddressingClassifierHasNoCallerYet:
             "    return None\n"
         )
         assert [n for n in ast.walk(quiet) if isinstance(n, ast.Call)] == []
+
+
+class TestNothingProducesAnAbstentionUtteranceYet:
+    """``silence()``, ``followup()`` and ``ASK_CLARIFICATION`` have no producer.
+
+    All three are *permitted* and well covered as contracts:
+    ``test_authority.py::TestAbstentionIsAlwaysAvailable`` asserts both helpers
+    are always allowed and need no confidence or evidence, and
+    ``test_boundary.py`` asserts a non-speaking proposal carries nothing to the
+    sink. None of that is repeated here. What was **not** recorded anywhere is
+    that nothing in ``src/`` ever *constructs* one.
+
+    Why that distinction earns a test rather than a comment. ``spec.md`` row
+    P-9 reads "missing / conflicting / expired / wrong-scope evidence -> do not
+    speculate, **say the operator is needed**", and names ``response.followup``
+    among its mechanisms. The first half is enforced and measured: a speak
+    proposal citing nothing comes back ``allowed=False`` with the violation
+    ``cite_without_citation``. The second half is not what happens. The verdict
+    carries ``added_flags``, ``allowed``, ``rules`` and ``violations`` - and no
+    replacement proposal - so the refusal ends in silence. The deferral
+    utterance is a constructor nobody calls.
+
+    Those are different behaviours for anyone in the room: saying nothing is
+    not the same as saying "this needs the operator". This project has already
+    had one reader take the available-means-wired step with the media gate, so
+    the distinction is recorded rather than left to the next reading.
+
+    **A producer appearing is not a defect.** It is the point of the helpers,
+    and a model-driven path is where one would be built. What this guards is a
+    producer arriving while the documents still describe the refusal as a
+    spoken deferral.
+    """
+
+    HELPERS = ("silence", "followup")
+    ACT = "ASK_CLARIFICATION"
+
+    #: Producers that exist and are accounted for. Empty today.
+    EXPECTED_PRODUCERS: frozenset[str] = frozenset()
+
+    #: The sentence in spec.md that has to agree with the ledger.
+    DOC_CLAIM = "chưa có producer nào trong `src/`"
+
+    @classmethod
+    def _producers(cls) -> set[str]:
+        """Producers of the helpers, plus uses of the act, by AST not by text.
+
+        ``ast.Call`` for the helpers excludes their own ``def`` lines, and
+        ``ast.Attribute`` for the act excludes the enum member's definition, an
+        ``__all__`` entry and a bare mention in a docstring - the shapes a text
+        search cannot separate.
+        """
+        found: set[str] = set()
+        for path in sorted(SRC.rglob("*.py")):
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Call):
+                    called = (
+                        node.func.id
+                        if isinstance(node.func, ast.Name)
+                        else node.func.attr
+                        if isinstance(node.func, ast.Attribute)
+                        else None
+                    )
+                    if called in cls.HELPERS:
+                        found.add(f"{path.name}:{node.lineno} {called}()")
+                elif isinstance(node, ast.Attribute) and node.attr == cls.ACT:
+                    found.add(f"{path.name}:{node.lineno} {cls.ACT}")
+        return found
+
+    def test_no_module_in_src_produces_one(self) -> None:
+        found = self._producers()
+        assert found == set(self.EXPECTED_PRODUCERS), (
+            f"an abstention utterance now has a producer: {sorted(found)}, "
+            f"ledger has {sorted(self.EXPECTED_PRODUCERS)}.\n"
+            "This is NOT a defect - producing one is what the helpers are for. "
+            "Three things are being asked for:\n"
+            "  1. add the producer to EXPECTED_PRODUCERS here;\n"
+            "  2. add a behavioural test for that path, because this ledger sees "
+            "the construction and not whether the deferral is actually spoken;\n"
+            "  3. update docs/spec.md row P-9, which currently records that the "
+            "deferral utterance has no producer."
+        )
+
+    def test_the_refusal_really_ends_in_silence_rather_than_a_deferral(self) -> None:
+        """The behaviour the ledger is about, asserted against the real gate.
+
+        Without this the ledger would be a statement about call sites only.
+        Here the claim is the user-visible one: evidence is missing, so the
+        proposal is refused, and the verdict offers nothing to say instead.
+        """
+        from meetai.authority import evaluate_response
+        from meetai.content import MeetingContent
+        from meetai.response import (
+            AddressContext,
+            ProposedResponse,
+            ResponseDecision,
+            SpeechAct,
+        )
+
+        verdict = evaluate_response(
+            ProposedResponse(
+                decision=ResponseDecision.SPEAK,
+                text=MeetingContent("Ngan sach du an la 240 trieu."),
+                intent=SpeechAct.CITE_APPROVED_POSITION,
+                confidence=0.9,
+            ),
+            address=AddressContext(directly_addressed=True),
+        )
+        assert verdict.allowed is False
+        # ``AuthorityVerdict`` is a slots dataclass, so it has no ``__dict__``
+        # and ``vars()`` raises. Ask the dataclass what fields it declares.
+        carried = {
+            f.name
+            for f in dataclasses.fields(verdict)
+            if isinstance(getattr(verdict, f.name), ProposedResponse)
+        }
+        assert carried == set(), (
+            f"the verdict now hands back a proposal ({sorted(carried)}), so a "
+            "refusal can become a spoken deferral. Update P-9 and this ledger."
+        )
+
+    def test_the_documents_agree_with_the_ledger(self) -> None:
+        """Two-way lock, the same shape as the other two ledgers here."""
+        spec = (
+            pathlib.Path(__file__).resolve().parent.parent / "docs" / "spec.md"
+        ).read_text(encoding="utf-8")
+        claimed = self.DOC_CLAIM in spec
+        if not self.EXPECTED_PRODUCERS:
+            assert claimed, (
+                "the ledger says nothing produces an abstention utterance, but "
+                "docs/spec.md no longer records that. Restore the statement in "
+                "row P-9, or record the producer."
+            )
+        else:
+            assert not claimed, (
+                "the ledger records a producer, but docs/spec.md still says "
+                "there is none. Update row P-9 to describe what is wired."
+            )
+
+    def test_the_scan_finds_a_producer_when_there_is_one(self) -> None:
+        """Control: a scan that matches nothing passes for free.
+
+        Runs the same matching over a source that really produces all three,
+        and over one that only mentions them in prose, in ``__all__`` and in an
+        annotation - the shapes that made a text search useless here.
+        """
+        wired = ast.parse(
+            "def f():\n"
+            "    a = silence()\n"
+            "    b = followup()\n"
+            "    c = SpeechAct.ASK_CLARIFICATION\n"
+            "    return a, b, c\n"
+        )
+        calls = {
+            node.func.id
+            for node in ast.walk(wired)
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+        }
+        attrs = {node.attr for node in ast.walk(wired) if isinstance(node, ast.Attribute)}
+        assert {"silence", "followup"} <= calls
+        assert "ASK_CLARIFICATION" in attrs
+
+        quiet = ast.parse(
+            '"""silence and followup are not called, ASK_CLARIFICATION unused."""\n'
+            '__all__ = ["silence", "followup", "ASK_CLARIFICATION"]\n'
+            "def g(x: SpeechAct = None) -> None:\n"
+            "    return None\n"
+        )
+        assert [n for n in ast.walk(quiet) if isinstance(n, ast.Call)] == []
+        assert [
+            n
+            for n in ast.walk(quiet)
+            if isinstance(n, ast.Attribute) and n.attr == "ASK_CLARIFICATION"
+        ] == []

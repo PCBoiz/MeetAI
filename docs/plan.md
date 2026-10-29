@@ -807,6 +807,105 @@ hỏng** vì pandoc sinh id khác cách viết tay -> gắn id tường minh, đ
 **Phần dư ghi rõ:** §E.4 (7 cột) và §I.7 (8 cột) xuống dòng nhiều — đọc được, không
 vỡ; tr.10/11/46 còn khoảng trắng vì giữ sơ đồ ASCII nguyên khối, là đánh đổi cố ý.
 
+### Lượt 53 — nghiên cứu dữ liệu cho bộ eval họp; YouTube thì không tải
+
+**Nghiên cứu chỉ đọc**, không tải dữ liệu, không chạy model, **không đưa file dữ
+liệu nào vào repo**. Ghi chú:
+[2026-10-29](research/2026-10-29-du-lieu-huan-luyen-va-tham-khao-zac.md).
+
+**Kết luận 1 — không tải audio họp từ YouTube.** Ba lý do độc lập: điều khoản
+YouTube cấm tải xuống + truy cập tự động trừ khi có cho phép **bằng văn bản**
+(đọc trực tiếp, 2026-10-29); **người nói trong băng chưa đồng thuận**, trong khi
+`spec.md` K-7 đang `tested` với test khẳng định không có đường học từ transcript;
+và **không có nhãn người làm** nên không đo được gì. Tuỳ chọn CC BY của YouTube
+trả lời câu *"được dùng lại nội dung không"*, **không** trả lời *"được lấy file
+về bằng cách này không"*.
+
+**Kết luận 2 — khoảng trống là thật, đường sạch là bộ eval nhỏ có đồng thuận.**
+Không corpus tiếng Việt nào đủ cả ba (miền họp + transcript người + giấy phép);
+repo đã đo từ lượt 10. **2-5 giờ** Sơn tự ghi, có đồng thuận, **đo được**;
+**100 giờ** YouTube nhãn-máy **không đo được gì**.
+
+**Kết luận 3 — một bộ dữ liệu bên thứ ba: dữ liệu không dùng được, phần phân
+tích giữ CỤC BỘ.** Giấy phép giới hạn chia sẻ (cùng hình dạng với lý do đã loại
+MLC-SLM ở A17) và miền cũng sai. **[CHỐT] Sơn 2026-10-29:** toàn bộ phân tích gói
+đó **không push**, đã vào `.gitignore`, chỉ dùng cục bộ. Thứ giữ lại là kết luận
+**của MeetAI**: phân loại khả năng theo **tác động** (đọc / ghi) là trục sẽ cần
+**bên cạnh** trục loại phát ngôn, khi có adapter thật.
+
+| Lát đề xuất | Nội dung | Chặn bởi |
+|---|---|---|
+| **D2** | Hợp đồng đo cho bộ eval họp — viết **trước** khi có dữ liệu | **không chặn** |
+| **D3** | Trạng thái **"hỏi có cấu trúc"**: nêu đúng tham số còn thiếu thay vì im lặng | không chặn |
+| **D1** | Giao thức ghi âm có đồng thuận | **[CHỜ SƠN]** — là một phần cổng 0-U |
+| **D4** | Khai `read`/`write` ở tầng capability | không chặn, giá trị thấp tới khi có adapter |
+
+**D2 trước**, vì hợp đồng đo viết sau khi nhìn dữ liệu sẽ bị uốn theo dữ liệu —
+thứ tự này đã cứu một kết luận ở S2.2 (không khử dấu, khoảng lệch **+5,62 đpt**).
+
+### Lượt 54 — D2: hợp đồng đo cho bộ eval họp, viết TRƯỚC khi có dữ liệu
+
+**Nghiên cứu chỉ đọc.** Ghi chú:
+[D2 — hợp đồng đo](research/2026-10-29-hop-dong-do-bo-eval-hop-tieng-viet.md).
+
+**Hai trong ba trở ngại của lượt 53 đã được gỡ:** **[CHỐT]** Sơn xác nhận người
+trong băng là cộng tác viên **đã đồng thuận**; và **[ĐÃ ĐO]** có **đường tải chính
+thức** cho video của chính mình (Studio MP4 720p/360p; Takeout hàng loạt) — lượt 53
+kết luận "không tải" mà **chưa tìm đường chính thức**, đã đính chính tại chỗ.
+**Trở ngại thứ ba — không có nhãn — còn nguyên và nay là toàn bộ bài toán.**
+
+**Cỡ mẫu nay tính ra**, neo trên artifact FLEURS của repo (bootstrap tái lập đúng CI
+đã ghi: **3,04** vs **3,03 pp**):
+
+| n phát ngôn | phút speech | đo tuyệt đối | so theo cặp |
+|---:|---:|---:|---:|
+| 160 | 32' | ± 2,26 pp | **Δ ≥ 0,86 pp** |
+| 361 | 72' | **± 1,51 pp** | Δ ≥ 0,57 pp |
+
+**Kết quả chính: so theo cặp rẻ hơn ~2,6 lần** vì khử phương sai giữa phát ngôn ⇒
+muốn **quyết định** thì ~**32 phút** speech là đủ; muốn **công bố** mới cần ~72
+phút. MeetAI cần cái cân trước.
+
+**Cái bẫy đã thiết kế cách đo:** nhãn sửa-từ-ASR **thiên về chính model đó**. Gõ mù
+**~80 phát ngôn** làm nhóm đối chứng; hiệu số theo cặp **chính là** thiên lệch. Chọn
+80 vì nó cho Δ ≥ 1,22 pp — nhỏ hơn thì phải viết *"chưa phát hiện được"*.
+
+**Không mở khoá gì:** không cổng B, không cổng C, không thay 16 nhãn eval (đó đo
+**quyền hạn**, cái này đo **nhận dạng**), không tự cho phép thu âm — **D1 vẫn thuộc
+cổng 0-U**.
+
+**Bước kế tiếp: dừng ở lô ~30 phút** — đủ cho cái cân, và thay **ba [GIẢ ĐỊNH]**
+(tỷ lệ speech, độ dài lượt, tỷ lệ nói chồng) bằng số thật **trước khi** bỏ 6–12 giờ
+công gán nhãn bộ đầy đủ.
+
+### Lượt 55 — khảo sát D3 rồi KHÔNG làm; ghim thứ khảo sát tìm ra
+
+**D3 bị chính khảo sát bác bỏ.** `ASK_CLARIFICATION` đã có trong allowlist;
+`findings` + `unsupported_counts` đã mang thông tin "thiếu cái gì" ở dạng
+shape-only; `findings` **đã được tiêu thụ**; dry-run **đã in** mã lý do cho mọi lần
+im lặng. Xây thêm producer = xây tầng quyết định do model dẫn (Phase 3, bị cổng
+chặn) và trái quy tắc *không tạo thứ yêu cầu hiện tại chưa cần*. **Không làm.**
+
+**Nhưng khảo sát tìm ra sai lệch tài liệu thật.** `silence()`/`followup()` có **0
+call site** trong `src/`; `ASK_CLARIFICATION` **0 tham chiếu**. Đo trên đường gọi
+thật: SPEAK dẫn nguồn rỗng ⇒ `allowed=False`, `cite_without_citation`, verdict
+**không** mang proposal thay thế. Nên `spec.md` **P-9** (*"→ không suy đoán, **nói
+cần chủ dự án**"*) đúng ở nửa đầu, còn nửa sau **không xảy ra**: hành vi hôm nay là
+**từ chối → im lặng**. Với người trong phòng đó là **hai hành vi khác nhau**.
+
+| Tiêu chí nghiệm thu | Kết quả |
+|---|---|
+| Quét bằng **AST**, loại định nghĩa / `__all__` / annotation / prose | **đạt** |
+| Có **ca hành vi**, không chỉ nói về call site | **đạt** |
+| **Khoá hai chiều** với `spec.md` | **đạt** |
+| Thông báo lỗi nói rõ producer xuất hiện **không phải lỗi** | **đạt** |
+| **Mutation**: producer ⇒ đỏ; prose/annotation ⇒ xanh | **4/4 đúng yêu cầu** |
+| Không thêm producer, không mở cổng, `src/` không đổi | **đạt** |
+
+Đã sửa `spec.md` P-9 — đính chính một **claim thật**, giữ `tested` nhưng tách nửa
+được cưỡng chế khỏi **nghĩa vụ hướng tới**. Lần thứ **ba** của hình dạng *"có
+constructor/API nhưng không ai gọi"* (sau media gate và addressing classifier).
+
 ## Lô tiếp theo
 
 **Giữ cấp A; tiếp tục việc không cần model.** Phương án A cho RAM đã được chọn:

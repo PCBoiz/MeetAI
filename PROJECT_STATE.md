@@ -2,7 +2,7 @@
 title: "MeetAI - Trạng thái dự án (sổ ghi bền vững)"
 owner: "Sơn"
 created: "2026-10-07"
-last_updated: "2026-10-11 (lượt 52)"
+last_updated: "2026-10-29 (lượt 55)"
 purpose: "Nguồn ghi nhớ chống mất thông tin khi context bị compact. Mọi lượt làm việc phải đọc file này trước và cập nhật sau."
 ---
 
@@ -20,7 +20,13 @@ purpose: "Nguồn ghi nhớ chống mất thông tin khi context bị compact. M
 
 ## 1. Hiện trạng repository
 
-Cập nhật 2026-10-11 lượt 52. **Mục này phải được làm mới mỗi lượt.**
+Cập nhật 2026-10-29 lượt 55. **Mục này phải được làm mới mỗi lượt.**
+
+**Đối chiếu lượt 55:** HEAD `cea5be1`, `main`, **122 commit**, `git status --porcelain --untracked-files=all` **exit 0 / 0 dòng**. Lát **test-only + đính chính spec**: không thêm producer, không mở cổng, không đổi acceptance criteria, không đổi nhãn eval, `src/` **không đổi**.
+
+**Đối chiếu lượt 54:** HEAD `8b53cd7`, `main`, **120 commit**, `git status --porcelain --untracked-files=all` **exit 0 / 0 dòng**. Lượt này **nghiên cứu chỉ đọc**: không thu âm, không chạy model, không tải dữ liệu, không thêm dependency. Chỉ thêm/sửa file trong `docs/`.
+
+**Đối chiếu lượt 53 (tự đo):** HEAD `4ae7a52`, `main`, **119 commit**, `git status --porcelain --untracked-files=all` **exit 0 / 0 dòng**, **không remote cấu hình**. `benchmarks/readiness.py` **không có diff** so với HEAD (cảnh báo "đổi trên đĩa" là dư âm của phép mutation lượt 51, file đã khôi phục khớp). Lượt này là **nghiên cứu chỉ đọc**: không chạy model, không tải dữ liệu, không thêm dependency, **không đưa file dữ liệu nào vào repo**.
 
 **Đối chiếu lượt 52 (tự đo):** đầu lượt HEAD `665a6c3`, `main`, **118 commit**, `git status --porcelain --untracked-files=all` **exit 0 / 0 dòng**, **không remote cấu hình**. Lát này **chỉ** sửa hai file proposal; `src/`, `tests/`, `docs/spec.md` và acceptance criteria **không đổi**. Bốn kiểm tra code vẫn chạy và vẫn xanh.
 
@@ -343,6 +349,285 @@ sát được**, vì không code nào gọi hàm đó và không sink nào tồn
 ---
 
 ## 7. Nhật ký lượt làm việc
+
+### 2026-10-29 - Lượt 55 (khảo sát D3 -> không làm; ghim thứ khảo sát tìm ra)
+
+**Test-only + một đính chính `spec.md`.** Không chạy model, không thêm producer,
+không mở cổng, không đổi acceptance criteria hay nhãn eval. `src/` **không đổi**.
+
+- **[ĐÃ ĐO] D3 ("trạng thái hỏi có cấu trúc") KHÔNG cần làm — khảo sát trước khi
+  viết code đã bác chính đề xuất của tôi ở lượt 53.** Bốn phép đo:
+  (1) `SpeechAct.ASK_CLARIFICATION` **đã có sẵn** trong allowlist;
+  (2) `AnswerabilityAssessment` **đã mang** `findings` (mã ổn định) và
+  `unsupported_counts` (đếm theo lớp, **shape-only** đúng quy tắc không-giá-trị);
+  (3) `findings` **đã được tiêu thụ** ở `boundary.py:406`;
+  (4) dry-run **đã in** mã lý do cho mọi lần im lặng — `claim_subject_absent_from_card`,
+  `cards_disagree:time`, `no_checkable_value_or_quote:1`, `cited_id_not_in_store`.
+  Nên thông tin "thiếu cái gì" **đã tới người vận hành rồi**. Xây thêm một producer
+  sẽ là xây tầng quyết định do model dẫn — thuộc Phase 3, đang bị cổng chặn — và
+  trái quy tắc *không tạo thứ yêu cầu hiện tại chưa cần*. **Không làm.**
+
+- **Nhưng khảo sát tìm ra một thứ khác, và nó là sai lệch tài liệu thật.**
+  **[ĐÃ ĐO] trên đường gọi thật:** `silence()` và `followup()` có **0 call site**
+  trong `src/`; `SpeechAct.ASK_CLARIFICATION` có **0 tham chiếu** (chỉ là định
+  nghĩa). Dựng một proposal SPEAK dẫn nguồn rỗng rồi gọi `evaluate_response`:
+  `allowed=False`, violation `cite_without_citation`, và verdict chỉ mang
+  `added_flags, allowed, rules, violations` — **không** có proposal thay thế.
+
+  **Hệ quả:** `spec.md` **P-9** ghi *"→ không suy đoán, **nói cần chủ dự án**"* và
+  nêu `response.followup` trong cột cơ chế. Nửa **"không suy đoán"** được cưỡng chế
+  và đo được. Nửa **"nói cần chủ dự án"** thì **không xảy ra**: hành vi hôm nay là
+  **từ chối → im lặng**, còn câu deferral là một constructor **không ai gọi**.
+  Với người trong phòng, **im lặng** và **nói "việc này cần chủ dự án"** là **hai
+  hành vi khác nhau**. Cùng lớp lỗi với phát hiện media gate (*"ZERO caller trong
+  `src/`"*) — lần thứ ba của hình dạng này.
+
+- **Đã sửa `spec.md` P-9** (đính chính một **claim thật**, không phải sửa cho có):
+  giữ `tested`, nhưng tách rõ nửa được cưỡng chế khỏi **nghĩa vụ hướng tới**, kèm
+  số đo.
+
+- **Ledger thứ ba + khoá hai chiều:** `TestNothingProducesAnAbstentionUtteranceYet`
+  — **4 ca**. Quét bằng **AST** (`ast.Call` cho helper, `ast.Attribute` cho act) nên
+  loại được **4 hình dạng** đã đánh bại grep: định nghĩa, `__all__`, annotation,
+  prose. Có **ca hành vi** (từ chối thật kết thúc bằng im lặng, verdict không mang
+  proposal) để ledger không chỉ nói về call site. Thông báo lỗi nói rõ **một producer
+  xuất hiện KHÔNG phải lỗi** và xin ba việc.
+
+- **[ĐÃ ĐO] 4/4 mutation đúng yêu cầu:** producer thật trong `src/` ⇒ **đỏ** ·
+  tham chiếu act ⇒ **đỏ** · **chỉ** prose + `__all__` + annotation ⇒ **xanh** (control
+  hai chiều) · xoá câu khoá khỏi `spec.md` ⇒ **đỏ**. Payload đặt trong hàm **không ai
+  gọi** (bài học lượt 39). `boundary.py` và `spec.md` khôi phục **khớp md5**.
+
+- **Hai lỗi của tôi trong lát này, ghi lại:** heredoc hỏng lần nữa (đã chuyển sang
+  script, đúng bài học đã ghi) — và tôi suýt đọc nhầm `tail` của file là nội dung
+  mình vừa ghi, trong khi `git status` sạch và `grep` cho **0**: đó là phần cuối của
+  **ledger addressing lượt 49**, vốn có control gần giống hệt. Kiểm bằng `git` trước
+  khi tin con mắt.
+
+- **[ĐÃ ĐO] Bốn kiểm tra:** `pytest -q` **5 281 passed, 3 skipped**, exit 0 ·
+  `ruff format --check .` 149 files, exit 0 · `ruff check .` exit 0 · `mypy`
+  87 source files, exit 0. *(Hai lần sửa giữa chừng: `vars()` hỏng vì
+  `AuthorityVerdict` là slots dataclass → dùng `dataclasses.fields()`; và mypy bắt
+  `AddressContext` phải import từ `meetai.response`, nơi nó **được định nghĩa**.)*
+
+- **[CHỜ SƠN] Không đụng gì.** Danh sách chờ không đổi.
+
+### 2026-10-29 - Lượt 54 (D2: hợp đồng đo cho bộ eval họp — tính cỡ mẫu, không đoán)
+
+**Nghiên cứu chỉ đọc.** Không thu âm, không chạy model, không tải dữ liệu, không
+thêm dependency, không mở cổng. `src/`, `tests/`, `docs/spec.md`, acceptance
+criteria **không đổi**.
+
+- **[CHỐT] Sơn trả lời trở ngại đồng thuận (2026-10-29):** người nói trong băng là
+  **cộng tác viên của Sơn** và **đã đồng thuận**. Đây là quyết định của Sơn về cộng
+  tác viên của Sơn — ghi nhận, không hỏi lại. Đó cũng là trở ngại tôi đánh giá
+  **nặng nhất** trong ba cái nêu ở lượt 53.
+
+- **[ĐÃ ĐO] Trở ngại điều khoản YouTube: có đường chính thức, và tôi đã bỏ sót nó ở
+  lượt 53.** `support.google.com/youtube/answer/56100` (truy cập 2026-10-29):
+  **YouTube Studio** cho tải **MP4** video **do chính mình đăng** (**720p hoặc
+  360p**, 5 lần/video/24 h), và **Google Takeout** cho tải **hàng loạt**. Đó đúng là
+  nhánh *"trừ khi được Dịch vụ cho phép"* trong Điều khoản — **không cần công cụ bên
+  thứ ba**. Lượt 53 kết luận "không tải" mà **chưa tìm đường chính thức**; đã
+  **đính chính ngay trong ghi chú lượt 53** thay vì để nguyên một kết luận cũ.
+
+- **[ĐÃ ĐO] Nhưng xuất từ YouTube là nguồn HẠNG HAI, và đó là confound thật.**
+  Studio xuất 720p/360p ⇒ **audio đã mã hoá lại**. Đo ASR trên đó trả lời *"nhận
+  dạng audio đã nén lại tốt đến đâu"*, **không** phải *"nhận dạng cuộc họp của Sơn
+  tốt đến đâu"*. Xếp hạng: **file ghi gốc** > **Takeout** (**[CHỜ BẰNG CHỨNG]** có
+  giữ bitstream gốc không — trang hỗ trợ không nói) > **Studio 720p/360p**.
+  **[ĐỀ XUẤT]** mọi clip phải mang trường `audio_provenance`, và trộn nguồn thì
+  **tách số**.
+
+- **Trở ngại thứ ba — không có nhãn — CÒN NGUYÊN, và nay là toàn bộ bài toán.**
+  Đồng thuận không tạo ra transcript. Lát **D2** vì thế được viết ngay:
+  [hợp đồng đo bộ eval họp](docs/research/2026-10-29-hop-dong-do-bo-eval-hop-tieng-viet.md).
+
+- **[ĐÃ ĐO] Cỡ mẫu nay TÍNH RA, không còn là trực giác.** Neo trên chính artifact
+  của repo (`asr-fleurs-small-gpu-20261007-210717.json`, 361 clip / 10 422 âm tiết /
+  71,7 phút). Bootstrap **tái lập đúng** CI đã ghi trong artifact (**3,04 pp** so với
+  **3,03 pp** đã lưu), nên cỗ máy tính là cái đã được kiểm chứng.
+
+  | n phát ngôn | phút speech | **đo tuyệt đối** CI nửa-rộng | **so theo cặp** Δ phát hiện được |
+  |---:|---:|---:|---:|
+  | 40 | 8' | ± 4,46 pp | ≥ 1,72 pp *(đo thật, thí nghiệm nhiễu)* |
+  | 80 | 16' | ± 3,16 pp | ≥ 1,22 pp |
+  | **160** | **32'** | ± 2,26 pp | **≥ 0,86 pp** |
+  | 361 | 72' | **± 1,51 pp** | ≥ 0,57 pp |
+
+- **Kết quả quan trọng nhất: so theo cặp rẻ hơn đo tuyệt đối ~2,6 lần** (ở n=361:
+  ±1,51 pp so với Δ 0,57 pp), vì nó **khử** phương sai giữa các phát ngôn. Hệ quả
+  đổi cách tiêu công sức: muốn **công bố** một con số thì cần ~**72 phút** speech;
+  muốn **quyết định** "thay đổi này có giúp không" thì chỉ cần ~**32 phút**. **Và
+  MeetAI cần cái thứ hai trước** — cần một cái cân đủ nhạy, không cần một số để khoe.
+
+- **[GIẢ ĐỊNH] Quy ra giờ ghi thô:** giả định 50–65% thời lượng họp là speech chấm
+  được ⇒ **~1 giờ** cho cái cân, **~2–2,5 giờ** cho một con số ±1,5 pp, **~3–4 giờ**
+  nếu tính biên cho trục phụ. **Con số 50–65% CHƯA ĐO trên dữ liệu của Sơn** và phải
+  thay bằng số thật ngay lô đầu. Nên "2–5 giờ" nói ở lượt 53 nay **có cơ sở tính
+  toán**.
+
+- **[ĐỀ XUẤT] Cái bẫy transcript, và cách ĐO nó thay vì giả vờ không có.** Sửa đầu
+  ra ASR làm nhãn thì rẻ hơn 2–3 lần, nhưng **thiên về chính model đó**: người sửa
+  bỏ qua những chỗ sai mà **nghe hợp lý** — đúng lớp lỗi thanh điệu mà repo đã đo là
+  khử dấu che mất **+5,62 pp**. Cùng hình dạng với tiền lệ **A13** (PhoWhisper có
+  VIVOS trong train ⇒ *"đo trí nhớ nhiều hơn"*). **Cách đo:** chọn ngẫu nhiên
+  **~15–20 phút speech (≈80 phát ngôn)**, seed ghi lại, **gõ mù từ đầu**; so theo cặp
+  nhãn-mù với nhãn-đã-sửa ⇒ **hiệu số đó chính là thiên lệch**. Chọn 80 vì §2.2 cho
+  Δ ≥ 1,22 pp; nhỏ hơn thế thì phải viết **"chưa phát hiện được"**, **không** phải
+  "không có".
+
+- **[GIẢ ĐỊNH] Trục nói chồng sẽ có số, nhưng số RỘNG:** overlap thường 5–15% thời
+  lượng ⇒ 72' speech cho ~20–55 phát ngôn ⇒ CI **± 4,46 pp** ở n=40. Viết ra
+  **trước** vì sau khi thấy CI rộng thì rất dễ bị cám dỗ gộp vào một số tổng — mà
+  repo **cố ý không có số tổng** và có test ghim.
+
+- **Ba giới hạn của bảng cỡ mẫu, ghi kèm:** neo là FLEURS **speech đọc** 11,9 s/phát
+  ngôn (lượt thoại họp ngắn và vụn hơn, hai hướng ngược nhau, **không ai biết biên
+  độ**) · SyER họp gần như chắc chắn **cao hơn** 23,47% nên bảng là **lạc quan** ·
+  quy mô `1/√n` ở cột so-theo-cặp là **phép suy ra từ một điểm đo**, **[CHỜ BẰNG
+  CHỨNG]** cho tới khi có bộ thật.
+
+- **D2 KHÔNG mở khoá:** không mở cổng cấp B (bốn cổng đó về **chạy** model) · không
+  mở cổng cấp C · không biến fine-tune thành bước kế tiếp (nó cho **cái cân**; cân
+  trước, sửa sau) · **không thay 16 nhãn eval đang [CHỜ SƠN]** — đó là bộ đo **quyền
+  hạn**, cái này đo **nhận dạng**, hai thứ không thay nhau được · không tự cho phép
+  thu âm gì; **D1 vẫn là một phần cổng 0-U**.
+
+- **[CHỜ SƠN] Hai câu hỏi làm rõ, KHÔNG chặn nghiên cứu:** (1) playlist có phải do
+  **chính kênh của Sơn** đăng không — quyết định đường lấy file ở §1; (2) ngoài cộng
+  tác viên đã đồng thuận, trong băng **còn ai khác nói** không — nếu có thì đồng
+  thuận cần phủ cả họ, theo đúng mô hình `(phiên, người, phạm vi, phiên bản thông
+  báo)` dự án đã dùng.
+
+- **[ĐÃ ĐO] ĐÍNH CHÍNH chẩn đoán lượt 53, và đã SỬA (commit riêng `a55f8ce`).**
+  Lượt 53 ghi test tree *"hỏng một lần"* và đoán là báo động giả. Đo lại: nó hỏng
+  **hai lần** trong hai lần chạy full suite, và **xanh 3 lần** khi chạy riêng file
+  đó — tức **tái lập được theo điều kiện**, không phải một lần ngẫu nhiên. Ba phép
+  đo chốt chẩn đoán: (1) **chỉ entry thư mục** từng hỏng, **chưa file nào** trong 5
+  lần chạy; (2) tập báo cáo **đổi giữa các lần** (`var/asr/noise` + `var/asr/results`
+  rồi chỉ `var/asr/noise`) — một lần ghi thật thì trúng **cùng** đường dẫn mọi lần;
+  (3) snapshot `var/` hai đầu một lần chạy full suite: **0 created, 0 removed, đúng
+  1 file changed** — `var/authority-eval.md`, do `tests/test_authority_eval.py` ghi
+  **cố ý** vào `var/` (gitignored, có ghi trong docstring của nó, **không phải lỗi**),
+  còn hai thư mục kia **không bị chạm**, mtime từ 2026-10-07.
+
+  **Sửa:** `_snapshot()` lưu `None` cho thư mục và `(size, mtime_ns)` chỉ cho file —
+  **presence-only**, nên khoá vẫn còn và `created`/`removed` vẫn bắt được thư mục
+  mới/bị xoá. Thứ duy nhất presence-only có thể làm mất là **một thư mục rỗng được
+  tạo** (vết của một đường ghi gọi `mkdir` rồi hỏng trước khi ghi) — và nó **không**
+  mất, vì khoá vẫn nằm trong `created`. **6 ca mới** kiểm trên cây tạm, chạy đúng
+  phép so ba-tập của assertion thật. **4/4 mutation đúng dự đoán**; một lần chạy
+  batch trước đó báo mutation #4 đỏ và **không tái lập được 3 lần** — ghi lại vì đó
+  là lỗi của **harness của tôi**, không phải của code. **Full suite xanh 3 lần liên
+  tiếp, 5 277 passed.**
+
+- **[ĐỀ XUẤT] Bước kế tiếp, dừng ở lô ~30 phút trước:** lô đó đã đủ cho **cái cân so
+  theo cặp** và nó thay **ba [GIẢ ĐỊNH]** của ghi chú (tỷ lệ speech, độ dài lượt, tỷ
+  lệ nói chồng) bằng số thật — **trước khi** Sơn bỏ 6–12 giờ công gán nhãn bộ đầy đủ.
+
+### 2026-10-29 - Lượt 53 (nghiên cứu: dữ liệu huấn luyện cho bộ eval họp)
+
+**Nghiên cứu chỉ đọc.** Không chạy model/GPU/benchmark/audio/Discord, không tải dữ
+liệu, không thêm dependency, không đổi egress/consent, **không đưa file nào của bộ
+bên thứ ba nào vào repo**. Mọi gate giữ **fail-closed**. `src/`, `tests/`, `docs/spec.md`,
+acceptance criteria **không đổi**.
+
+- **Sơn hỏi hai việc:** (1) một bộ dữ liệu bên thứ ba dạy được gì cho hướng phát
+  triển; (2) có thể lấy `.wav` ghi âm cuộc họp từ một playlist YouTube làm dữ liệu
+  train không. Câu (1) trả lời ở mục **[CỤC BỘ]** dưới; câu (2) trả lời đầy đủ ở
+  đây và ở [D2 — hợp đồng đo](docs/research/2026-10-29-hop-dong-do-bo-eval-hop-tieng-viet.md).
+
+- **[ĐỀ XUẤT] Câu trả lời về YouTube: KHÔNG tải.** Ba lý do **độc lập**, lý do thứ
+  hai là nặng nhất:
+  1. **[ĐÃ ĐO] Điều khoản YouTube** (`youtube.com/t/terms`, truy cập 2026-10-29) cấm
+     *"truy cập, sản xuất lại, **tải xuống**…"* trừ khi có cho phép trước **bằng văn
+     bản** của YouTube **và** chủ sở hữu quyền; và cấm *"truy cập Dịch vụ bằng bất kỳ
+     **phương thức tự động** nào"*. Tải hàng loạt là **đúng hai điều bị cấm**.
+     Tuỳ chọn **CC BY** của YouTube (`support.google.com/youtube/answer/2797468`,
+     cùng ngày) trả lời câu *"được dùng lại nội dung không"*, **không** trả lời câu
+     *"được lấy file về bằng cách này không"* — và trang đó không nêu đường tải nào.
+  2. **Đồng thuận của người nói trong băng.** Chủ kênh giữ bản quyền **bản ghi**,
+     nhưng **không thay mặt được** từng người trong phòng. `spec.md` **K-7**
+     *"Không học trực tiếp từ meeting transcript"* đang `tested`, có kiểm thử khẳng
+     định **không có đường nào**. Một dự án cưỡng chế "không học từ transcript của
+     **chính người dùng**" rồi đi train trên transcript của **người lạ** thì nguyên
+     tắc đó chỉ còn là chữ.
+  3. **Không có nhãn thì không đo được.** Phụ đề tự động là **đầu ra của một ASR
+     khác**, không phải nhãn vàng; không có nhãn người nói/timestamp nên không đóng
+     được trục nói chồng/diarization. Đúng cái bẫy đã ghi ở khảo sát corpus nói chồng
+     (*"68 turn không đỡ được một claim WER"*).
+
+- **Nhưng khoảng trống Sơn chỉ ra là CÓ THẬT, và repo đã tự đo từ lượt 10:** không
+  corpus tiếng Việt nào trong phạm vi vừa có **miền họp** + **transcript người làm**
+  + **giấy phép tương thích**. **[ĐỀ XUẤT] đường sạch mạnh nhất: Sơn tự ghi 2-5 giờ
+  cuộc họp của chính mình, có đồng thuận tường minh.** Với một trợ lý một-máy-một-
+  người, **phân phối** quan trọng hơn **khối lượng**: 2-5 giờ đúng phòng/mic/người
+  **đo được**; 100 giờ YouTube nhãn-máy **không đo được gì**.
+
+- **[ĐÃ ĐO] Thời điểm:** MeetAI **chưa huấn luyện gì** — `src/` có **0 định danh
+  huấn luyện** (ghim bằng AST). Bốn cổng cấp B đều về **chạy** model, không phải
+  **train**. Thứ đang chặn hôm nay là **đo**, không phải **train**.
+
+- **[CỤC BỘ, KHÔNG CÔNG KHAI] Khảo sát một bộ dữ liệu bên thứ ba.** Sơn trỏ tới
+  một gói dữ liệu có **giới hạn chia sẻ** (chỉ cấp cho bên đã đăng ký, cấm phát
+  tán). Tôi đã đọc nó **chỉ để tham khảo thiết kế** và **không đưa file nào vào
+  repo**. **[CHỐT] Sơn 2026-10-29: toàn bộ phần phân tích gói đó giữ ở LOCAL,
+  không push, và ghi chú đã vào `.gitignore`.** Nên bản ghi chi tiết **cố ý vắng
+  mặt khỏi cây được theo dõi** — đây là sự vắng mặt **có chủ đích**, không phải
+  thiếu sót. Hai kết luận **của MeetAI** rút ra từ đó thì giữ lại, vì chúng không
+  mang gì của gói kia: (1) dữ liệu của nó **không dùng được** cho MeetAI — giấy
+  phép giới hạn, **cùng hình dạng** với lý do đã loại MLC-SLM ở **A17** — và miền
+  cũng sai; (2) phân loại khả năng theo **tác động** (đọc / ghi) là một trục
+  MeetAI sẽ cần **bên cạnh** trục **loại phát ngôn** hiện có, ngay khi có một
+  adapter thật.
+
+- **[ĐỀ XUẤT] Bốn lát dữ liệu, không lát nào cần tải dữ liệu hay mở cổng:**
+  **D2** hợp đồng đo cho bộ eval họp (**làm được ngay**) -> **D3** trạng thái
+  **"hỏi có cấu trúc"** (nêu đúng tham số còn thiếu thay vì im lặng — đánh thẳng vào
+  lỗ S2.3 đã đo: model trả lời khi bằng chứng **có mặt nhưng không đủ**) ->
+  **D1** giao thức ghi âm có đồng thuận (**[CHỜ SƠN]**, chính là cổng **0-U**) ->
+  **D4** khai `read`/`write` ở tầng capability. **D2 trước** vì hợp đồng đo phải viết
+  **trước** khi nhìn thấy dữ liệu — thứ tự này đã cứu một kết luận ở S2.2 (chính sách
+  **không khử dấu** tự chứng minh bằng khoảng lệch **+5,62 điểm**).
+
+- **[CHỜ BẰNG CHỨNG]** Playlist cụ thể: trang render bằng JavaScript nên chỉ đọc được
+  tiêu đề *"Họp Project"*; **không** đọc được chủ kênh, số video hay giấy phép từng
+  video. Ghi chú **không** kết luận gì về giấy phép của nó.
+
+- **[ĐÃ ĐO] Bốn kiểm tra: lần chạy ĐẦU có 1 test FAIL, và đó là một phát hiện thật.**
+  `pytest -q` lần đầu: **1 failed, 5270 passed**, exit **1**. Test hỏng:
+  `test_local_trial.py::TestTheRunWritesNothing::test_the_repository_tree_is_unchanged_by_every_command`
+  — *"changed: ['var/asr/noise', 'var/asr/results']"*. **Không** báo xanh khi chưa xanh.
+
+  **Chẩn đoán, có bằng chứng:** cả hai đều là **thư mục**, và `mtime` của chúng là
+  **2026-10-07 21:45 / 22:50** — tức **không gì ghi vào chúng** trong lượt này. File
+  mới nhất bên trong cũng từ 2026-10-07. Nên thứ test thấy khác đi là `stat()` của
+  **chính entry thư mục**, không phải một lần ghi. Chạy lại: full suite **5 271
+  passed** exit 0, và `test_local_trial.py` xanh **3 lần liên tiếp** (19 passed).
+
+  **Vì sao đây là lỗi của test, không phải của code:** `_snapshot()` duyệt
+  `rglob("*")` nên **gồm cả thư mục**, và so `(st_size, st_mtime_ns)`. Với một thư
+  mục trên Windows, hai trường đó **không mang thông tin nào mà entry file chưa
+  mang**: file được tạo thì vào tập `created`, bị xoá thì vào `removed`, bị sửa thì
+  vào `changed`. Nên entry thư mục là **dư thừa thuần tuý** — nó chỉ thêm được
+  **báo động giả**. Và một báo động giả trong một test an toàn là **chi phí thật**:
+  nó dạy người ta bỏ qua đúng cái test chứng minh cấp A không ghi đĩa — cùng lập
+  luận repo đã dùng cho preflight (*"một preflight luôn từ chối dạy người ta truyền
+  `--force`"*).
+
+  **[ĐỀ XUẤT] Lát riêng, KHÔNG gộp vào lát tài liệu này:** bỏ entry thư mục khỏi
+  `_snapshot()`, và **chứng minh bằng mutation** rằng tạo/xoá/sửa một file bên trong
+  một thư mục **vẫn** làm test đỏ qua `created`/`removed`/`changed`. Không nới
+  assertion nào. *(Lần chạy thứ hai của bốn kiểm tra: `pytest` **5 271 passed**
+  exit 0 · `ruff format --check` 148 files exit 0 · `ruff check` exit 0 · `mypy`
+  87 source files exit 0.)*
+
+- **[CHỜ SƠN] Không đụng gì:** Consent TTL/mode, late-join, persistence/retention,
+  privacy wording, 16 nhãn eval, hai ngưỡng RAM, scope câu hỏi họp, permit media sink,
+  `model.path`/`derived_from`, tạo app/bot Discord, dừng tiến trình mồ côi, chính sách
+  ghi đè generator, tên/alias. **Thêm vào danh sách chờ: giao thức ghi âm có đồng
+  thuận (D1)** — nó là một phần của 0-U, không phải câu hỏi mới.
 
 ### 2026-10-11 - Lượt 52 (viết lại proposal: 9 trang -> 46 trang, QA trực quan đủ mọi trang)
 
